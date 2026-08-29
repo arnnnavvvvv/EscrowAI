@@ -1,0 +1,42 @@
+{
+  "entity": "event",
+  "account_id": "acc_Lm9Xk2QpVtRxYa",
+  "event": "payment.captured",
+  "contains": ["payment"],
+  "payload": {
+    "payment": {
+      "entity": {
+        "id": "pay_PmQ8sK2eZvKYlo",
+        "entity": "payment",
+        "amount": 499000,
+        "currency": "INR",
+        "status": "captured",
+        "order_id": "order_PmQ7rL2eZvKYlk",
+        "invoice_id": null,
+        "international": false,
+        "method": "upi",
+        "amount_refunded": 0,
+        "captured": true,
+        "description": "Order ord_20871 — Team plan, annual",
+        "card_id": null,
+        "bank": null,
+        "wallet": null,
+        "vpa": "dana@okhdfcbank",
+        "email": "dana@example.com",
+        "contact": "+919812345678",
+        "notes": {
+          "order_id": "ord_20871",
+          "account_id": "acct_7734"
+        },
+        "fee": 11782,
+        "tax": 1797,
+        "acquirer_data": {
+          "rrn": "418100337722",
+          "upi_transaction_id": "AC1B2C3D4E5F60718293A4B5C6D7E8F9"
+        },
+        "created_at": 1751328000
+      }
+    }
+  },
+  "created_at": 1751328000
+}

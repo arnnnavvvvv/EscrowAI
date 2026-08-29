@@ -1,0 +1,54 @@
+{
+  "entity": "event",
+  "account_id": "acc_Lm9Xk2QpVtRxYa",
+  "event": "refund.processed",
+  "contains": ["refund", "payment"],
+  "payload": {
+    "refund": {
+      "entity": {
+        "id": "rfnd_PmQM0T2eZvKYlr",
+        "entity": "refund",
+        "amount": 499000,
+        "currency": "INR",
+        "payment_id": "pay_PmQ8sK2eZvKYlo",
+        "notes": {
+          "order_id": "ord_20871",
+          "account_id": "acct_7734"
+        },
+        "receipt": null,
+        "acquirer_data": {
+          "rrn": "418100449833",
+          "arn": "74567891234567890123456"
+        },
+        "created_at": 1751414800,
+        "batch_id": null,
+        "status": "processed",
+        "speed_processed": "normal",
+        "speed_requested": "normal"
+      }
+    },
+    "payment": {
+      "entity": {
+        "id": "pay_PmQ8sK2eZvKYlo",
+        "entity": "payment",
+        "amount": 499000,
+        "currency": "INR",
+        "status": "refunded",
+        "order_id": "order_PmQ7rL2eZvKYlk",
+        "method": "upi",
+        "amount_refunded": 499000,
+        "refund_status": "full",
+        "captured": true,
+        "description": "Order ord_20871 — Team plan, annual",
+        "email": "dana@example.com",
+        "contact": "+919812345678",
+        "notes": {
+          "order_id": "ord_20871",
+          "account_id": "acct_7734"
+        },
+        "created_at": 1751328000
+      }
+    }
+  },
+  "created_at": 1751414800
+}

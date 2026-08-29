@@ -1,0 +1,35 @@
+{
+  "id": "evt_3PqL8s2eZvKYlo2C1mQ7xR4a",
+  "object": "event",
+  "api_version": "2024-06-20",
+  "created": 1751328000,
+  "type": "payment_intent.succeeded",
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": "req_9Hk2mQ4pLtVxZa",
+    "idempotency_key": "b1f0c2a4-8d3e-4a1b-9c7d-2e5f6a8b0c1d"
+  },
+  "data": {
+    "object": {
+      "id": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+      "object": "payment_intent",
+      "amount": 4999,
+      "amount_received": 4999,
+      "currency": "usd",
+      "status": "succeeded",
+      "customer": "cus_Qe8vK2mNpL4xYz",
+      "latest_charge": "ch_3PqL8s2eZvKYlo2C1a9bT7Kd",
+      "payment_method": "pm_1PqL8s2eZvKYlo2CkWq3nR8t",
+      "payment_method_types": ["card"],
+      "capture_method": "automatic",
+      "confirmation_method": "automatic",
+      "description": "Order ord_10423 — Pro plan, annual",
+      "receipt_email": "dana@example.com",
+      "metadata": {
+        "order_id": "ord_10423",
+        "account_id": "acct_5521"
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@escrowai/fixtures",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Real-schema webhook payload library — Stripe and Razorpay-shaped events plus delivery scenarios.",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

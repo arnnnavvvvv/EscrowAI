@@ -1,0 +1,50 @@
+{
+  "id": "evt_3PqM0T2eZvKYlo2C7hN4pB1e",
+  "object": "event",
+  "api_version": "2024-06-20",
+  "created": 1751414800,
+  "type": "charge.refunded",
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": "req_7Rt2mK9pWqYxZc",
+    "idempotency_key": "d3f2e4c6-0a5b-4c3d-9e7f-4a8b0c2d3e5f"
+  },
+  "data": {
+    "object": {
+      "id": "ch_3PqL8s2eZvKYlo2C1a9bT7Kd",
+      "object": "charge",
+      "amount": 4999,
+      "amount_captured": 4999,
+      "amount_refunded": 4999,
+      "currency": "usd",
+      "captured": true,
+      "paid": true,
+      "refunded": true,
+      "customer": "cus_Qe8vK2mNpL4xYz",
+      "payment_intent": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+      "description": "Order ord_10423 — Pro plan, annual",
+      "metadata": {
+        "order_id": "ord_10423",
+        "account_id": "acct_5521"
+      },
+      "refunds": {
+        "object": "list",
+        "total_count": 1,
+        "has_more": false,
+        "data": [
+          {
+            "id": "re_3PqM0T2eZvKYlo2C0kQ9wL2m",
+            "object": "refund",
+            "amount": 4999,
+            "currency": "usd",
+            "charge": "ch_3PqL8s2eZvKYlo2C1a9bT7Kd",
+            "payment_intent": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+            "reason": "requested_by_customer",
+            "status": "succeeded"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "id": "evt_3PqLB42eZvKYlo2C0dW9yT2c",
+  "object": "event",
+  "api_version": "2024-06-20",
+  "created": 1751328420,
+  "type": "payment_intent.payment_failed",
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": "req_4Lp8nR2qWtYxZb",
+    "idempotency_key": "c2e1d3b5-9f4a-4b2c-8d6e-3f7a9b1c2d4e"
+  },
+  "data": {
+    "object": {
+      "id": "pi_3PqLB42eZvKYlo2C0dW9yT2c",
+      "object": "payment_intent",
+      "amount": 4999,
+      "amount_received": 0,
+      "currency": "usd",
+      "status": "requires_payment_method",
+      "customer": "cus_Qe8vK2mNpL4xYz",
+      "latest_charge": "ch_3PqLB42eZvKYlo2C1kR7mN0p",
+      "payment_method_types": ["card"],
+      "description": "Order ord_10424 — Pro plan, annual",
+      "last_payment_error": {
+        "code": "card_declined",
+        "decline_code": "insufficient_funds",
+        "message": "Your card has insufficient funds.",
+        "type": "card_error",
+        "payment_method": {
+          "id": "pm_1PqLB42eZvKYlo2CpQ9wR3tv",
+          "type": "card"
+        }
+      },
+      "metadata": {
+        "order_id": "ord_10424",
+        "account_id": "acct_5521"
+      }
+    }
+  }
+}
