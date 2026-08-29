@@ -7,3 +7,5 @@ export { replayScenario } from "./replay.js";
 export { diffScenario, diffAll } from "./diff.js";
 export { buildVerdict } from "./verdict.js";
 export { normalizeEffects, effectsMissingFrom } from "./effects.js";
+export { detectWebhookChanges, type ChangedFile, type DetectionResult } from "./detect.js";
+export { buildMcpServer } from "./mcp.js";

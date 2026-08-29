@@ -15,6 +15,7 @@
   "scripts": {
     "replay:sample": "npm run replay:sample --workspace agent",
     "agent:server": "npm run server --workspace agent",
+    "agent:mcp": "npm run mcp --workspace agent",
     "dashboard": "npm run dev --workspace @escrowai/dashboard",
     "landing": "npm run dev --workspace @escrowai/landing",
     "build": "npm run build --workspaces --if-present",
