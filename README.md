@@ -32,13 +32,37 @@ pieces land.
 
 ## Running locally
 
-_Fills in once the pipeline is wired. Requires Node 20+, Docker, a Groq API key, and a
-GitHub token — see `.env.example`._
+Requires **Node 20+** and **Docker** (the sandbox falls back to local processes if the
+Docker daemon is down). A Groq key and GitHub token are only needed for the verdict
+phrasing and the live GitHub integration — the replay engine and both UIs run without
+them.
 
 ```bash
 npm install
-cp .env.example .env   # fill in GROQ_API_KEY and GITHUB_TOKEN
+
+# Replay the seeded PR end to end and print the verdict
+npm run replay:sample
+
+# Or drive it from the dashboard:
+npm run agent:server     # http://localhost:4600
+npm run dashboard        # http://localhost:4610  → Start replay → Approve
+
+# The landing page (recorded run, demo mode):
+npm run landing          # http://localhost:5173
 ```
+
+`npm test` runs the suite; `npm run typecheck` checks all packages.
+
+## Layout
+
+- `protocol/` — shared `RunEvent` / `RunResult` type contract
+- `fixtures/` — Stripe & Razorpay-shaped payloads + delivery scenarios
+- `sample-target/` — the webhook service replays run against, with its effect-log contract
+- `sandbox/` — two-branch materialisation + Docker / process backends
+- `agent/` — replay, effect-diff classifier, verdict, CLI, HTTP server
+- `dashboard/ui/` — shared React component library (`@escrowai/ui`)
+- `dashboard/` — local dashboard app
+- `landing/` — static landing page, replays `demo-data/`
 
 ## Qodo review evidence
 

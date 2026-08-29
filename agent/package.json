@@ -10,10 +10,12 @@
   },
   "scripts": {
     "start": "tsx src/cli.ts",
+    "server": "tsx src/server.ts",
     "replay:sample": "tsx src/cli.ts --scenario silent-refund-drop"
   },
   "dependencies": {
     "@escrowai/fixtures": "*",
+    "@escrowai/protocol": "*",
     "@escrowai/sandbox": "*"
   }
 }
