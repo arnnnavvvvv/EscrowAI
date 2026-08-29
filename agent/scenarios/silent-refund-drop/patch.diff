@@ -1,0 +1,73 @@
+diff --git a/src/handlers.js b/src/handlers.js
+index cba9871..1a40238 100644
+--- a/src/handlers.js
++++ b/src/handlers.js
+@@ -9,7 +9,34 @@ import {
+ } from "./ledger.js";
+ import { recordEffect } from "./effects.js";
+ 
+-// Handle one Stripe event. Routes on the event type and moves the ledger accordingly.
++// Credit the account for a successful payment intent.
++function creditFromIntent(object) {
++  const accountId = object.metadata?.account_id ?? "unknown";
++  credit(accountId, object.id, object.amount_received, object.currency);
++  recordEffect("notification.send", { accountId, template: "payment_receipt" });
++}
++
++// Notify the customer that a payment intent failed.
++function notifyFailed(object) {
++  const accountId = object.metadata?.account_id ?? "unknown";
++  recordEffect("notification.send", { accountId, template: "payment_failed" });
++}
++
++// Reverse a charge that was refunded.
++function handleRefund(object) {
++  const accountId = object.metadata?.account_id ?? "unknown";
++  refund(accountId, object.payment_intent, object.amount_refunded, object.currency);
++  recordEffect("notification.send", { accountId, template: "refund_confirmation" });
++}
++
++// Stripe event type -> handler. Cleaner than a switch and easy to extend.
++const STRIPE_ROUTES = {
++  "payment_intent.succeeded": creditFromIntent,
++  "payment_intent.payment_failed": notifyFailed,
++  "charge.refund": handleRefund
++};
++
++// Handle one Stripe event. Looks the type up in the route table and applies it.
+ export function handleStripe(event, headers) {
+   const eventId = event.id;
+   if (alreadyProcessed(eventId)) {
+@@ -17,27 +44,11 @@ export function handleStripe(event, headers) {
+   }
+ 
+   const object = event.data?.object ?? {};
+-
+-  switch (event.type) {
+-    case "payment_intent.succeeded": {
+-      const accountId = object.metadata?.account_id ?? "unknown";
+-      credit(accountId, object.id, object.amount_received, object.currency);
+-      recordEffect("notification.send", { accountId, template: "payment_receipt" });
+-      break;
+-    }
+-    case "payment_intent.payment_failed": {
+-      const accountId = object.metadata?.account_id ?? "unknown";
+-      recordEffect("notification.send", { accountId, template: "payment_failed" });
+-      break;
+-    }
+-    case "charge.refunded": {
+-      const accountId = object.metadata?.account_id ?? "unknown";
+-      refund(accountId, object.payment_intent, object.amount_refunded, object.currency);
+-      recordEffect("notification.send", { accountId, template: "refund_confirmation" });
+-      break;
+-    }
+-    default:
+-      recordEffect("ignored", { eventType: event.type });
++  const route = STRIPE_ROUTES[event.type];
++  if (route) {
++    route(object);
++  } else {
++    recordEffect("ignored", { eventType: event.type });
+   }
+ 
+   markProcessed(eventId);
