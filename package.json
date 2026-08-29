@@ -6,9 +6,7 @@
   "workspaces": [
     "agent",
     "sandbox",
-    "dashboard",
-    "dashboard/ui",
-    "landing"
+    "fixtures"
   ],
   "scripts": {
     "agent": "npm run start --workspace agent",
@@ -17,7 +15,7 @@
     "build": "npm run build --workspaces --if-present",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -p fixtures --noEmit && tsc -p sandbox --noEmit && tsc -p agent --noEmit"
   },
   "engines": {
     "node": ">=20"
