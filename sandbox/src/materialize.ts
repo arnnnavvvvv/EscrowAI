@@ -16,11 +16,17 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
 
 export interface Materialized {
   scenario: ScenarioManifest;
-  manifest: TargetManifest;
-  /** Working tree checked out at the base branch. */
+  /** Working tree checked out at the base branch, with its own manifest. */
   baseDir: string;
-  /** Working tree checked out at the PR branch, patch applied. */
+  baseManifest: TargetManifest;
+  /** Working tree checked out at the PR branch (patch applied), with its own manifest. */
   prDir: string;
+  prManifest: TargetManifest;
+}
+
+/** Read and parse a target's `.escrowai.json`. */
+async function readManifest(dir: string): Promise<TargetManifest> {
+  return JSON.parse(await readFile(join(dir, ".escrowai.json"), "utf8")) as TargetManifest;
 }
 
 /**
@@ -50,10 +56,6 @@ export async function materialize(opts: {
     filter: (src) => !/[/\\](node_modules|\.git)[/\\]/.test(src + "/")
   });
 
-  const manifest = JSON.parse(
-    await readFile(join(repoDir, ".escrowai.json"), "utf8")
-  ) as TargetManifest;
-
   say(`initialising git repo, committing ${scenario.baseBranch}`);
   await git(repoDir, "init", "-q", "-b", scenario.baseBranch);
   await git(repoDir, "config", "user.email", "sandbox@escrowai.local");
@@ -79,5 +81,8 @@ export async function materialize(opts: {
   await git(repoDir, "worktree", "add", "-q", baseDir, scenario.baseBranch);
   await git(repoDir, "worktree", "add", "-q", prDir, scenario.prBranch);
 
-  return { scenario, manifest, baseDir, prDir };
+  // Read each manifest from its own worktree — a PR is allowed to change ports, routes, or endpoints.
+  const [baseManifest, prManifest] = await Promise.all([readManifest(baseDir), readManifest(prDir)]);
+
+  return { scenario, baseDir, baseManifest, prDir, prManifest };
 }

@@ -35,6 +35,8 @@ export interface ScenarioView {
 export interface RunViewModel {
   meta: { scenarioId: string; title: string; baseBranch: string; prBranch: string } | null;
   phase: string;
+  /** Set when the run emitted an `error` event — the run is over and did not produce a verdict. */
+  error: string | null;
   backend: string | null;
   branches: { base: BranchStatus; pr: BranchStatus };
   scenarios: ScenarioView[];
@@ -48,6 +50,7 @@ export interface RunViewModel {
 export const initialRunState: RunViewModel = {
   meta: null,
   phase: "idle",
+  error: null,
   backend: null,
   branches: { base: "idle", pr: "idle" },
   scenarios: [],
@@ -237,6 +240,8 @@ export function applyEvent(state: RunViewModel, event: RunEvent): RunViewModel {
     case "error":
       return {
         ...state,
+        error: event.message,
+        finished: true,
         activity: pushActivity(state, { kind: "error", text: event.message, tone: "drop" })
       };
 

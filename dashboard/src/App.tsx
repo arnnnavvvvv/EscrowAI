@@ -42,7 +42,11 @@ export function App() {
 
   async function approve() {
     if (phase.kind !== "running") return;
-    await approveRun(phase.runId, "you");
+    try {
+      await approveRun(phase.runId, "you");
+    } catch {
+      setError("Could not release the merge hold — the agent server may have stopped.");
+    }
   }
 
   if (phase.kind === "running") {

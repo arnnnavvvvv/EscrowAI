@@ -42,10 +42,12 @@ export interface PlayerControls extends RunSource {
 /**
  * Demo source — re-emits a captured timeline at its recorded pace (optionally sped up). The
  * gaps between events are what make the run watchable, so they are preserved, just scaled.
+ * Looping is the consumer's job (recreate or `restart` after `onEnd`) so the reduced state
+ * is reset between cycles rather than replayed on top of itself.
  */
 export function createPlayerSource(
   capture: DemoCapture,
-  opts: { speed?: number; autoStart?: boolean; loopDelayMs?: number } = {}
+  opts: { speed?: number; autoStart?: boolean; onEnd?: () => void } = {}
 ): PlayerControls {
   let speed = opts.speed ?? 1.4;
   const listeners = new Set<(event: RunEvent) => void>();
@@ -61,13 +63,9 @@ export function createPlayerSource(
     const entries = capture.timeline;
     const last = entries[entries.length - 1]?.t ?? 0;
     for (const { t, event } of entries) {
-      timers.push(
-        setTimeout(() => listeners.forEach((l) => l(event)), t / speed)
-      );
+      timers.push(setTimeout(() => listeners.forEach((l) => l(event)), t / speed));
     }
-    if (opts.loopDelayMs != null) {
-      timers.push(setTimeout(play, last / speed + opts.loopDelayMs));
-    }
+    if (opts.onEnd) timers.push(setTimeout(opts.onEnd, last / speed + 400));
   };
 
   if (opts.autoStart !== false) {

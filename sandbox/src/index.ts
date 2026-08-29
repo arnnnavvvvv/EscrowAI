@@ -18,12 +18,14 @@ export async function createSandbox(opts: CreateSandboxOptions): Promise<Sandbox
   const say = opts.onProgress ?? (() => {});
   const wanted = opts.backend ?? "auto";
 
-  const { scenario, manifest, baseDir, prDir } = await materialize({
+  const { scenario, baseDir, baseManifest, prDir, prManifest } = await materialize({
     targetDir: opts.targetDir,
     scenarioDir: opts.scenarioDir,
     workDir: opts.workDir,
     onProgress: say
   });
+
+  const cleanWorkDir = () => rm(opts.workDir, { recursive: true, force: true }).catch(() => {});
 
   let backend: "docker" | "process";
   if (wanted === "docker") {
@@ -38,32 +40,34 @@ export async function createSandbox(opts: CreateSandboxOptions): Promise<Sandbox
   }
 
   const runId = Date.now().toString(36);
-  const instances =
-    backend === "docker"
-      ? await createDockerSandbox({
-          baseDir,
-          prDir,
-          baseBranch: scenario.baseBranch,
-          prBranch: scenario.prBranch,
-          manifest,
-          runId,
-          say
-        })
-      : await createProcessSandbox({
-          baseDir,
-          prDir,
-          baseBranch: scenario.baseBranch,
-          prBranch: scenario.prBranch,
-          manifest,
-          say
-        });
+  const args = {
+    baseDir,
+    baseManifest,
+    prDir,
+    prManifest,
+    baseBranch: scenario.baseBranch,
+    prBranch: scenario.prBranch,
+    say
+  };
+
+  let instances: { base: import("./types.js").BranchInstance; pr: import("./types.js").BranchInstance };
+  try {
+    instances =
+      backend === "docker"
+        ? await createDockerSandbox({ ...args, runId })
+        : await createProcessSandbox(args);
+  } catch (err) {
+    // A failed boot must not leak the worktree (the backends clean up their own half-started instances).
+    await cleanWorkDir();
+    throw err;
+  }
 
   return {
     ...instances,
     backend,
     async teardown() {
       await Promise.allSettled([instances.base.stop(), instances.pr.stop()]);
-      await rm(opts.workDir, { recursive: true, force: true }).catch(() => {});
+      await cleanWorkDir();
     }
   };
 }

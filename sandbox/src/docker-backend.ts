@@ -53,13 +53,19 @@ async function bootInstance(
       image
     );
     const baseUrl = `http://127.0.0.1:${hostPort}`;
-    await waitForHealth(baseUrl + manifest.health);
+    try {
+      await waitForHealth(baseUrl + manifest.health);
+    } catch (err) {
+      await stop();
+      throw err;
+    }
     say(`${role}: healthy`);
     return baseUrl;
   };
 
   const stop = async (): Promise<void> => {
     await docker("rm", "-f", container).catch(() => {});
+    await docker("rmi", "-f", image).catch(() => {});
   };
 
   let baseUrl = await start();
@@ -72,20 +78,21 @@ async function bootInstance(
     },
     manifest,
     async reset() {
-      await stop();
+      await docker("rm", "-f", container).catch(() => {});
       baseUrl = await start();
     },
     stop
   };
 }
 
-/** Build and run both branches as containers. */
+/** Build and run both branches as containers; tear down the base instance if the PR instance fails. */
 export async function createDockerSandbox(args: {
   baseDir: string;
+  baseManifest: TargetManifest;
   prDir: string;
+  prManifest: TargetManifest;
   baseBranch: string;
   prBranch: string;
-  manifest: TargetManifest;
   runId: string;
   say: (line: string) => void;
 }) {
@@ -93,17 +100,22 @@ export async function createDockerSandbox(args: {
     "base",
     args.baseBranch,
     args.baseDir,
-    args.manifest,
+    args.baseManifest,
     args.runId,
     args.say
   );
-  const pr = await bootInstance(
-    "pr",
-    args.prBranch,
-    args.prDir,
-    args.manifest,
-    args.runId,
-    args.say
-  );
-  return { base, pr };
+  try {
+    const pr = await bootInstance(
+      "pr",
+      args.prBranch,
+      args.prDir,
+      args.prManifest,
+      args.runId,
+      args.say
+    );
+    return { base, pr };
+  } catch (err) {
+    await base.stop();
+    throw err;
+  }
 }

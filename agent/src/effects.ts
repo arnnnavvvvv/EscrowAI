@@ -2,7 +2,10 @@
 
 import type { NormalizedEffect } from "./types.js";
 
-const MONEY_MOVING = new Set(["ledger.credit", "ledger.debit"]);
+// Effects that move money. Losing or duplicating one of these between branches is a blocking
+// finding, not a cosmetic change. `refund.queued` is deliberately excluded — it is a pending
+// marker; the money moves on the `ledger.debit` that follows it.
+const MONEY_MOVING = new Set(["ledger.credit", "ledger.debit", "refund.issue"]);
 
 /** Fields that identify an effect regardless of when it happened. */
 const SIGNATURE_FIELDS = [

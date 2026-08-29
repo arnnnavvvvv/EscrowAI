@@ -51,4 +51,17 @@ describe("diffScenario", () => {
     expect(d.addedInPr).toHaveLength(1);
     expect(d.classification).toBe("double-process");
   });
+
+  it("treats a dropped refund.issue as a silent drop, not a cosmetic change", () => {
+    const refundIssue = { kind: "refund.issue", accountId: "a1", paymentId: "p1", amount: 4999, currency: "usd" };
+    const d = diffScenario(run([credit, refundIssue]), run([credit]));
+    expect(d.classification).toBe("silent-drop");
+    expect(d.moneyMoving.droppedCount).toBe(1);
+  });
+
+  it("treats a duplicated refund.issue as a double-process", () => {
+    const refundIssue = { kind: "refund.issue", accountId: "a1", paymentId: "p1", amount: 4999, currency: "usd" };
+    const d = diffScenario(run([refundIssue]), run([refundIssue, refundIssue]));
+    expect(d.classification).toBe("double-process");
+  });
 });

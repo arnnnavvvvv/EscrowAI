@@ -24,7 +24,7 @@ function Approval({
 }: {
   gate: RunViewModel["gate"];
   approvedBy: string | null;
-  onApprove?: () => void;
+  onApprove?: () => void | Promise<void>;
 }) {
   const [pending, setPending] = useState(false);
   if (gate !== "block" && gate !== "approved") return null;
@@ -42,9 +42,13 @@ function Approval({
         <button
           className="btn"
           disabled={pending || !onApprove}
-          onClick={() => {
+          onClick={async () => {
             setPending(true);
-            onApprove?.();
+            try {
+              await onApprove?.();
+            } finally {
+              setPending(false);
+            }
           }}
         >
           {pending ? "releasing…" : "Approve & release merge"}
@@ -59,7 +63,7 @@ export function VerdictCard({
   onApprove
 }: {
   model: RunViewModel;
-  onApprove?: () => void;
+  onApprove?: () => void | Promise<void>;
 }) {
   const { verdict } = model;
   if (!verdict) return null;

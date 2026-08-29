@@ -80,6 +80,13 @@ export function buildMcpServer(): McpServer {
       }
     },
     async ({ scenario }) => {
+      const known = await scenarioIds();
+      if (!/^[a-z0-9][a-z0-9-]*$/i.test(scenario) || !known.includes(scenario)) {
+        return {
+          content: [{ type: "text", text: `Unknown scenario "${scenario}". Available: ${known.join(", ")}` }],
+          isError: true
+        };
+      }
       const result = await runReplay({
         targetDir,
         scenarioDir: join(scenariosDir, scenario),
@@ -120,6 +127,7 @@ async function main(): Promise<void> {
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   await server.connect(transport);
 
+  const host = process.env.ESCROWAI_MCP_HOST ?? "127.0.0.1";
   createServer((req, res) => {
     if (req.url !== "/mcp") {
       res.writeHead(404).end();
@@ -128,8 +136,8 @@ async function main(): Promise<void> {
     transport.handleRequest(req, res).catch((err) => {
       res.writeHead(500).end(String(err));
     });
-  }).listen(port, () => {
-    console.log(`EscrowAI MCP (streamable http) on http://localhost:${port}/mcp`);
+  }).listen(port, host, () => {
+    console.log(`EscrowAI MCP (streamable http) on http://${host}:${port}/mcp`);
   });
 }
 

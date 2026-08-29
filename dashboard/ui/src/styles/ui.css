@@ -187,6 +187,15 @@
   background: var(--line-hi);
 }
 
+.run-error {
+  border: 1px solid var(--drop-dim);
+  background: var(--drop-dim);
+  color: var(--text-0);
+  border-radius: var(--r-2);
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--step-0);
+}
+
 /* ---------- branch boot ---------- */
 
 .branches {
