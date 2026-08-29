@@ -1,0 +1,24 @@
+# Build spec and working notes — never committed
+agent.md
+decisions.md
+flow.md
+tweet.md
+.claude/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Editor / OS
+.DS_Store
+.vscode/
+*.log

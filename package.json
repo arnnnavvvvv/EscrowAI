@@ -1,0 +1,23 @@
+{
+  "name": "escrowai",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A merge gate for payment webhooks — replays real-shaped events against both branches and reports what would now silently break.",
+  "workspaces": [
+    "agent",
+    "sandbox",
+    "dashboard",
+    "dashboard/ui",
+    "landing"
+  ],
+  "scripts": {
+    "agent": "npm run start --workspace agent",
+    "dashboard": "npm run dev --workspace dashboard",
+    "landing": "npm run dev --workspace landing",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
