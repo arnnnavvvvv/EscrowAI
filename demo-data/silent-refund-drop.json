@@ -1,7 +1,7 @@
 {
   "scenarioId": "silent-refund-drop",
   "title": "Refactor Stripe event routing to a lookup table",
-  "backend": "process",
+  "backend": "docker",
   "baseBranch": "main",
   "prBranch": "pr/route-table-refactor",
   "runs": {
@@ -1750,6 +1750,6 @@
     ],
     "markdown": "## EscrowAI is blocking this merge — 2 payment behaviours would silently break\n\nReplayed the webhook fixture library against `pr/route-table-refactor` and the base branch in an isolated sandbox. 5 scenarios checked.\n\n### What would break\n\n**Ordered lifecycle — capture then refund** — SILENT DROP\n\nThe PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced.\n\nEffects the base branch produced that this PR does not:\n- `ledger.debit` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n- `notification.send` (accountId acct_5521, template refund_confirmation)\n\nEffects this PR produces that the base branch does not:\n- `ignored` (eventType charge.refunded)\n\n> Every delivery still returned a success status. Nothing here shows up in logs or metrics.\n\n**Out-of-order — refund before capture** — SILENT DROP\n\nThe PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced.\n\nEffects the base branch produced that this PR does not:\n- `refund.queued` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n- `notification.send` (accountId acct_5521, template refund_confirmation)\n- `ledger.debit` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n\nEffects this PR produces that the base branch does not:\n- `ignored` (eventType charge.refunded)\n\n> Every delivery still returned a success status. Nothing here shows up in logs or metrics.\n\n### Unaffected\nDuplicate delivery — same event twice · Retry after failure — provider redelivers · Duplicate refund — refund event twice\n\n---\nMerge is held until a human reviews the replay diff and approves in the EscrowAI dashboard."
   },
-  "startedAt": "2026-08-29T23:17:23.205Z",
-  "finishedAt": "2026-08-29T23:17:30.875Z"
+  "startedAt": "2026-08-29T23:19:33.468Z",
+  "finishedAt": "2026-08-29T23:20:03.920Z"
 }
