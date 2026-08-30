@@ -104,8 +104,51 @@ is a base-vs-PR multiset rather than golden expectations, why the seeded bug is 
 one-character key typo, why the process backend exists, and what code-review findings were
 taken vs. declined.
 
-## Code review
+## Code review (Qodo)
 
 Every change ships as a pull request reviewed by [Qodo Merge](https://www.qodo.ai/) before
-it merges. The review trail is on the PRs in this repo; `decisions.md` (entry D17) records
-which findings were applied and which were declined, with reasons.
+it merges — nothing was committed straight to `main`. The full trail is on the PRs; the
+summary:
+
+| PR | Scope | Qodo findings | Outcome |
+|---|---|---:|---|
+| [#1](https://github.com/arnnnavvvvv/EscrowAI/pull/1) | fixture library | 3 | tooling gaps (workspace list, typecheck target) — fixed |
+| [#2](https://github.com/arnnnavvvvv/EscrowAI/pull/2) | sample target | 4 | pending-refund overwrite fixed; partial-refund over-debit declined (out of scope, see D17) |
+| [#3](https://github.com/arnnnavvvvv/EscrowAI/pull/3) | replay engine | 11 | 8 fixed in [#6](https://github.com/arnnnavvvvv/EscrowAI/pull/6); 3 declined with reasons |
+| [#4](https://github.com/arnnnavvvvv/EscrowAI/pull/4) | UI + server | 7 | all fixed in [#6](https://github.com/arnnnavvvvv/EscrowAI/pull/6) |
+| [#5](https://github.com/arnnnavvvvv/EscrowAI/pull/5) | MCP + harness | 5 | path-traversal + access-control fixed; others addressed |
+| [#6](https://github.com/arnnnavvvvv/EscrowAI/pull/6) | review-fix pass | 3 | follow-ups fixed |
+| [#7](https://github.com/arnnnavvvvv/EscrowAI/pull/7) | docs | 0 | — |
+
+### Findings that mattered, and what changed
+
+- **Fallback exposes host secrets** (security) — the process backend passed the full parent
+  environment to PR-controlled code, so a replayed handler could read `GITHUB_TOKEN` /
+  `GROQ_API_KEY`. Now runs with a minimal allow-listed env.
+- **Webhook requests can hang** (reliability) — replay `fetch` calls had no deadline; a PR
+  branch that accepts a connection and never responds would hang the merge gate forever.
+  All replay calls are now bounded by `AbortSignal.timeout`.
+- **PR manifest changes ignored** (correctness) — `materialize()` read one `.escrowai.json`
+  before applying the patch and used it for both branches. Now each branch's manifest is
+  read from its own worktree.
+- **Failed boots leak instances** (reliability) — a failed second-instance boot left the
+  first container and the worktree behind. Each backend now stops its half-started
+  instance, and `createSandbox` cleans the workdir on construction failure.
+- **Scenario path traversal** (security) — the run and MCP endpoints joined an unvalidated
+  scenario name into a filesystem path. Now validated against the on-disk scenario list.
+- **`refund.issue` never blocks** (correctness) — the money-moving set was hardcoded to
+  credits and debits. `refund.issue` added; classifier tests for dropped/duplicated
+  refunds added.
+- **Docker images accumulate** — `stop()` / `reset()` now `docker rmi` as well.
+
+### Findings declined, and why
+
+- **Partial-refund over-debit** in `sample-target` — it's a deliberately minimal demo
+  target, not the product, and no fixture delivers partial refunds. Noted in
+  `sample-target/README.md`.
+- **Golden expected-effects per scenario** — the design is explicitly a base-vs-PR
+  differential (`decisions.md` D12); golden expectations would duplicate it and drift.
+- **Persistent server / WebSockets / auth on the control plane** — out of scope per the
+  build's non-goals (local, self-hosted, no auth).
+
+`decisions.md` D17 has the complete applied/declined list.
