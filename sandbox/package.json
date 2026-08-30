@@ -1,0 +1,11 @@
+{
+  "name": "@escrowai/sandbox",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Materialises the target repo's base and PR branches and boots each in isolation — Docker in real runs, local processes for development.",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
