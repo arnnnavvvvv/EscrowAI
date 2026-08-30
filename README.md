@@ -53,6 +53,16 @@ npm run landing          # http://localhost:5173
 
 `npm test` runs the suite; `npm run typecheck` checks all packages.
 
+### On the TrueForge harness
+
+```bash
+npm run agent:mcp -- --http     # EscrowAI replay engine as an MCP server on :4700
+npx @truefoundry/trueforge      # the harness
+```
+
+Then configure Groq + the GitHub connector + the EscrowAI MCP URL in the TrueForge UI and
+import the agent manifest. Full steps: [`agent/trueforge/README.md`](agent/trueforge/README.md).
+
 ## Layout
 
 - `protocol/` — shared `RunEvent` / `RunResult` type contract
