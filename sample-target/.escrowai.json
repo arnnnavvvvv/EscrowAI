@@ -1,0 +1,16 @@
+{
+  "$comment": "Target manifest — tells EscrowAI how to boot this service and where its webhook routes and effect log live.",
+  "name": "sample-target",
+  "language": "node",
+  "dockerfile": "Dockerfile",
+  "port": 4000,
+  "health": "/__health",
+  "effectsEndpoint": "/__effects",
+  "stateEndpoint": "/__state",
+  "failInjectionEndpoint": "/__control/fail-next",
+  "routes": {
+    "stripe": "/webhooks/stripe",
+    "razorpay": "/webhooks/razorpay"
+  },
+  "webhookPaths": ["src/handlers.js", "src/ledger.js", "src/server.js"]
+}

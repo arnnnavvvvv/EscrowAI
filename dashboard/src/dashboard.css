@@ -1,0 +1,83 @@
+/* Dashboard shell — the start screen and the run container. Run-view styling comes from @escrowai/ui. */
+
+.dash {
+  min-height: 100vh;
+  background:
+    radial-gradient(1000px 500px at 80% -10%, rgba(255, 32, 188, 0.07), transparent 60%),
+    var(--bg-0);
+}
+
+.dash--start {
+  display: grid;
+  place-items: center;
+  padding: var(--sp-5);
+}
+
+.start {
+  width: min(520px, 100%);
+  border: 1px solid var(--line-hi);
+  border-radius: var(--r-3);
+  background: linear-gradient(180deg, var(--surface), var(--bg-1));
+  box-shadow: var(--shadow-1);
+  padding: var(--sp-7) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.start__title {
+  font-size: var(--step-3);
+  letter-spacing: -0.03em;
+}
+
+.start__lede {
+  color: var(--text-1);
+  margin: 0;
+}
+
+.start__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+}
+
+.start__field select {
+  font-family: var(--font-mono);
+  font-size: var(--step-0);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-0);
+  background: var(--bg-2);
+  border: 1px solid var(--line-hi);
+  border-radius: var(--r-1);
+  padding: 10px 12px;
+}
+
+.start__go {
+  align-self: flex-start;
+  margin-top: var(--sp-2);
+}
+
+.start__error {
+  color: var(--drop);
+  font-size: var(--step--1);
+  font-family: var(--font-mono);
+  margin: 0;
+}
+
+.dash__error {
+  max-width: 1180px;
+  margin: var(--sp-4) auto 0;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--drop-dim);
+  background: var(--drop-dim);
+  border-radius: var(--r-2);
+  color: var(--text-0);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+}

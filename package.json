@@ -4,20 +4,24 @@
   "version": "0.1.0",
   "description": "A merge gate for payment webhooks — replays real-shaped events against both branches and reports what would now silently break.",
   "workspaces": [
-    "agent",
+    "protocol",
+    "fixtures",
     "sandbox",
-    "dashboard",
+    "agent",
     "dashboard/ui",
+    "dashboard",
     "landing"
   ],
   "scripts": {
-    "agent": "npm run start --workspace agent",
-    "dashboard": "npm run dev --workspace dashboard",
-    "landing": "npm run dev --workspace landing",
+    "replay:sample": "npm run replay:sample --workspace agent",
+    "agent:server": "npm run server --workspace agent",
+    "agent:mcp": "npm run mcp --workspace agent",
+    "dashboard": "npm run dev --workspace @escrowai/dashboard",
+    "landing": "npm run dev --workspace @escrowai/landing",
     "build": "npm run build --workspaces --if-present",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -p protocol --noEmit && tsc -p fixtures --noEmit && tsc -p sandbox --noEmit && tsc -p agent --noEmit && tsc -p dashboard/ui --noEmit && tsc -p dashboard --noEmit && tsc -p landing --noEmit"
   },
   "engines": {
     "node": ">=20"

@@ -1,0 +1,119 @@
+/* Design tokens for the EscrowAI UI — the arcade.dev-calibrated palette, type scale, and motion curves. Imported once per app. */
+
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+:root {
+  color-scheme: dark;
+
+  /* Near-black base — warm, not pure #000, so surfaces have depth. */
+  --bg-0: #0a0908;
+  --bg-1: #100e0d;
+  --bg-2: #16130f;
+  --surface: #1b1714;
+  --surface-hi: #221d18;
+
+  /* Hairlines and dividers. */
+  --line: rgba(255, 246, 232, 0.09);
+  --line-hi: rgba(255, 246, 232, 0.16);
+
+  /* Text. */
+  --text-0: #f6f3ee;
+  --text-1: #b6afa4;
+  --text-2: #7d766b;
+  --text-3: #544e46;
+
+  /* The signature accent — acid green through to hot magenta. Used with restraint. */
+  --acid: #c3ff00;
+  --magenta: #ff20bc;
+  --gradient: linear-gradient(103deg, var(--acid) 0%, #7bf06a 26%, #ff8a3d 62%, var(--magenta) 100%);
+  --gradient-flat: linear-gradient(103deg, var(--acid), var(--magenta));
+  --acid-dim: rgba(195, 255, 0, 0.14);
+  --magenta-dim: rgba(255, 32, 188, 0.16);
+
+  /* Status — pass reads calm, silent-drop reads alarming, changed reads cautionary. */
+  --pass: #4fd6a0;
+  --pass-dim: rgba(79, 214, 160, 0.14);
+  --drop: #ff4d5e;
+  --drop-dim: rgba(255, 77, 94, 0.15);
+  --changed: #e7b341;
+  --changed-dim: rgba(231, 179, 65, 0.15);
+
+  /* Type. */
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --step--1: 0.78rem;
+  --step-0: 0.9rem;
+  --step-1: 1.06rem;
+  --step-2: 1.4rem;
+  --step-3: 2rem;
+  --step-4: 2.9rem;
+  --step-5: 4rem;
+
+  /* Radius — tight and technical. */
+  --r-1: 5px;
+  --r-2: 9px;
+  --r-3: 14px;
+  --r-pill: 999px;
+
+  /* Space. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 36px;
+  --sp-7: 56px;
+  --sp-8: 88px;
+
+  /* Motion — one enter curve, one snap curve, consistent everywhere. */
+  --ease-enter: cubic-bezier(0.16, 0.84, 0.3, 1);
+  --ease-snap: cubic-bezier(0.5, 0, 0.1, 1);
+  --dur-1: 140ms;
+  --dur-2: 240ms;
+  --dur-3: 420ms;
+  --dur-4: 700ms;
+
+  --shadow-1: 0 1px 0 rgba(255, 246, 232, 0.04) inset, 0 8px 30px -12px rgba(0, 0, 0, 0.7);
+  --glow-acid: 0 0 0 1px rgba(195, 255, 0, 0.3), 0 0 28px -6px rgba(195, 255, 0, 0.35);
+  --glow-drop: 0 0 0 1px rgba(255, 77, 94, 0.35), 0 0 30px -8px rgba(255, 77, 94, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-0);
+  color: var(--text-0);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0;
+}
+
+::selection {
+  background: var(--magenta);
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

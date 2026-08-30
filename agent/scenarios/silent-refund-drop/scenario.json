@@ -1,0 +1,22 @@
+{
+  "$comment": "A canned PR against sample-target, used for local runs and to capture the demo recording. patch.diff is applied to the materialised sample-target repo to produce the PR branch.",
+  "id": "silent-refund-drop",
+  "title": "Refactor Stripe event routing to a lookup table",
+  "prBranch": "pr/route-table-refactor",
+  "baseBranch": "main",
+  "patch": "patch.diff",
+  "touchedPaths": ["src/handlers.js"],
+  "prDescription": "Replaces the growing switch in handleStripe with a route table keyed by event type. No behaviour change intended — same handlers, just dispatched from a map.",
+  "replaySet": [
+    "ordered-lifecycle",
+    "duplicate-delivery",
+    "out-of-order-refund",
+    "retry-after-failure",
+    "duplicate-refund"
+  ],
+  "expectedFinding": {
+    "verdict": "block",
+    "silentDrops": ["stripe.refunded"],
+    "summary": "The route table key is \"charge.refund\"; Stripe sends \"charge.refunded\". Every Stripe refund now falls through to the ignore branch, still returns 200, and never debits the ledger."
+  }
+}

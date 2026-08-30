@@ -3,6 +3,7 @@ agent.md
 decisions.md
 flow.md
 tweet.md
+blog.md
 .claude/
 
 # Secrets
@@ -17,6 +18,9 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
+
+# Sandbox scratch — materialised base/PR checkouts
+.escrowai-work/
 
 # Editor / OS
 .DS_Store

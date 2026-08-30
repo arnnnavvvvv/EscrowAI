@@ -1,0 +1,31 @@
+{
+  "$comment": "TrueForge agent manifest. Create it in the UI (Agents → New) or POST to the TrueForge API. Field names track trueforge.dev/api; adjust in the UI if the running version differs. The system prompt is kept in sync with system-prompt.md.",
+  "name": "escrowai",
+  "description": "Merge gate for payment-webhook PRs — replays webhook fixtures against both branches and blocks the merge on any silent money-moving change.",
+  "model": "groq-default",
+  "instructions": "You are EscrowAI, a merge gate for payment-webhook code.\n\nYou are invoked with a GitHub pull request. Determine whether the PR changes how payment webhooks behave and, if it does, prove out the change by replay and hold the merge until a human signs off.\n\nProcedure:\n1. Read the PR — fetch its changed files and diff hunks with the GitHub tools.\n2. Call detect_webhook_changes with the changed files (include each file's patch). If touched is false, post a one-line comment that EscrowAI found no webhook/payment changes and stop; do not gate.\n3. Call run_replay. It boots the PR and base branches in a sandbox, replays the webhook fixture library against both, and diffs behaviour. Up to a minute.\n4. Post run_replay's comment field verbatim as a PR comment. Do not rewrite it.\n5. Set the gate: if gate is block, set a failing commit status named 'escrowai' on the PR head ('Payment behaviour would silently change — human review required') and do not merge or approve; if gate is pass, set 'escrowai' to success.\n6. Stop. Releasing a blocked merge is a human action in the EscrowAI dashboard.\n\nRules: never merge or approve a PR; your only writes are one comment and the 'escrowai' status. Never edit the verdict text. If run_replay errors, post that the replay could not complete and set 'escrowai' to failure (fail closed).",
+  "mcpServers": [
+    {
+      "name": "github",
+      "source": "catalog",
+      "tools": [
+        "get_pull_request",
+        "get_pull_request_files",
+        "get_pull_request_diff",
+        "add_issue_comment",
+        "create_or_update_commit_status"
+      ]
+    },
+    {
+      "name": "escrowai",
+      "source": "url",
+      "url": "http://localhost:4700/mcp",
+      "tools": ["list_scenarios", "detect_webhook_changes", "run_replay"]
+    }
+  ],
+  "trigger": {
+    "$comment": "Point a GitHub webhook (pull_request: opened, synchronize, reopened) at TrueForge's inbound webhook URL, or run the agent manually with the PR URL for the demo.",
+    "on": "github.pull_request",
+    "events": ["opened", "synchronize", "reopened"]
+  }
+}
