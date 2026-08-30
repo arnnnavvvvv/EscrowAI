@@ -1,0 +1,51 @@
+{
+  "entity": "event",
+  "account_id": "acc_Lm9Xk2QpVtRxYa",
+  "event": "payment.failed",
+  "contains": ["payment"],
+  "payload": {
+    "payment": {
+      "entity": {
+        "id": "pay_PmQBw42eZvKYlp",
+        "entity": "payment",
+        "amount": 499000,
+        "currency": "INR",
+        "status": "failed",
+        "order_id": "order_PmQBv12eZvKYln",
+        "invoice_id": null,
+        "international": false,
+        "method": "card",
+        "amount_refunded": 0,
+        "captured": false,
+        "description": "Order ord_20872 — Team plan, annual",
+        "card_id": "card_PmQBw42eZvKYlq",
+        "card": {
+          "network": "Visa",
+          "type": "debit",
+          "last4": "4917"
+        },
+        "bank": null,
+        "wallet": null,
+        "vpa": null,
+        "email": "dana@example.com",
+        "contact": "+919812345678",
+        "notes": {
+          "order_id": "ord_20872",
+          "account_id": "acct_7734"
+        },
+        "fee": null,
+        "tax": null,
+        "error_code": "BAD_REQUEST_ERROR",
+        "error_description": "Payment failed due to insufficient funds.",
+        "error_source": "bank",
+        "error_step": "payment_authorization",
+        "error_reason": "insufficient_funds",
+        "acquirer_data": {
+          "auth_code": null
+        },
+        "created_at": 1751328420
+      }
+    }
+  },
+  "created_at": 1751328420
+}
