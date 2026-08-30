@@ -49,13 +49,24 @@ Replaying the seeded PR (`agent/scenarios/silent-refund-drop`), which refactors 
 ## Running locally
 
 Requires **Node 20+** and **Docker** (the sandbox falls back to local processes if the
-Docker daemon is down). A Groq key and GitHub token are only needed for model-phrased
-verdict text and the live GitHub integration — the replay engine and both UIs run without
-them.
+Docker daemon is down).
 
 ```bash
 npm install
+cp .env.example .env
+```
 
+Then open `.env` and fill in:
+
+| Variable | Needed for | Get it from |
+|---|---|---|
+| `GROQ_API_KEY` | Model-phrased verdict text (optional — falls back to the deterministic verdict) | <https://console.groq.com/keys> |
+| `GITHUB_TOKEN` | The live GitHub integration — reading PR diffs, posting the verdict, setting the merge status | a fine-grained PAT with **Contents: read**, **Pull requests: read/write**, **Commit statuses: read/write** on the target repo |
+
+The replay engine and both UIs run **without** either key — you only need them for the
+model phrasing and the live PR integration.
+
+```bash
 # Replay the seeded PR end to end and print the verdict
 npm run replay:sample
 
@@ -99,10 +110,23 @@ event stream — live SSE for the dashboard, a recorded timeline for the landing
 
 ## Design notes
 
-Every meaningful judgement call is logged in `decisions.md` as it was made — why the diff
-is a base-vs-PR multiset rather than golden expectations, why the seeded bug is a
-one-character key typo, why the process backend exists, and what code-review findings were
-taken vs. declined.
+- **The diff is a base-vs-PR differential, not golden expectations.** Effects are compared
+  as a normalised multiset (order and timestamps ignored). This catches "this money
+  movement stopped happening" without maintaining an exhaustive expected-output file per
+  scenario that would drift.
+- **`silent` is defined by the HTTP layer.** A money-moving effect that disappears while
+  every delivery still returned `2xx` is a silent drop and blocks. If the PR surfaced an
+  error for the same case, it's a normal behaviour change the team would already see — not
+  blocking.
+- **The seeded bug is a one-character key typo** (`charge.refund` vs `charge.refunded`) in
+  an otherwise clean refactor — because the point is a failure that survives review, not
+  one a diff reader would catch.
+- **The process backend exists** so the whole pipeline is developable and demoable without
+  Docker, and a daemon hiccup can't kill a demo. It runs with a minimal env and is
+  labelled `backend: "process"` in the output — it is not real isolation.
+- **The agent never merges, approves, or releases the hold.** Releasing a payment change
+  into `main` is the irreversible action, and it stays a human decision made in the
+  dashboard.
 
 ## Code review (Qodo)
 
@@ -147,8 +171,8 @@ summary:
   target, not the product, and no fixture delivers partial refunds. Noted in
   `sample-target/README.md`.
 - **Golden expected-effects per scenario** — the design is explicitly a base-vs-PR
-  differential (`decisions.md` D12); golden expectations would duplicate it and drift.
-- **Persistent server / WebSockets / auth on the control plane** — out of scope per the
-  build's non-goals (local, self-hosted, no auth).
+  differential; golden expectations would duplicate it and drift.
+- **Persistent server / WebSockets / auth on the control plane** — out of scope for a
+  local, self-hosted tool.
 
-`decisions.md` D17 has the complete applied/declined list.
+Each merged PR (#1–#7) carries Qodo's full review inline.
