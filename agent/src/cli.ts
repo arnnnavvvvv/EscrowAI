@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runReplay } from "./run.js";
-import type { RunEvent } from "./events.js";
+import type { RunEvent } from "@escrowai/protocol";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -64,12 +64,23 @@ async function main(): Promise<void> {
   const backend =
     args.backend === "docker" || args.backend === "process" ? args.backend : "auto";
 
+  // Record every event with a millisecond offset so the landing page can replay the run at its real cadence.
+  const timeline: Array<{ t: number; event: RunEvent }> = [];
+  const t0 = Date.now();
+
   const result = await runReplay({
     targetDir: join(repoRoot, "sample-target"),
     scenarioDir: join(repoRoot, "agent", "scenarios", scenarioId),
     workDir: join(repoRoot, ".escrowai-work", scenarioId),
     backend,
-    onEvent: renderEvent
+    onEvent: (event) => {
+      timeline.push({ t: Date.now() - t0, event });
+      renderEvent(event);
+    },
+    // When capturing for the demo, script the human step so the recording shows the full arc through merge release.
+    awaitApproval: args.capture
+      ? () => new Promise((r) => setTimeout(() => r({ by: "the team" }), 2600))
+      : undefined
   });
 
   if (args.capture) {
@@ -78,7 +89,7 @@ async function main(): Promise<void> {
         ? args.capture
         : join(repoRoot, "demo-data", `${scenarioId}.json`);
     await mkdir(dirname(out), { recursive: true });
-    await writeFile(out, JSON.stringify(result, null, 2));
+    await writeFile(out, JSON.stringify({ result, timeline }, null, 2));
     console.log(`captured run → ${out}`);
   }
 

@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createSandbox, type ScenarioManifest } from "@escrowai/sandbox";
 import type { BranchInstance } from "@escrowai/sandbox";
+import { deliveryScenarios } from "@escrowai/fixtures";
 import { replayScenario } from "./replay.js";
 import { diffAll } from "./diff.js";
 import { buildVerdict } from "./verdict.js";
@@ -19,6 +20,11 @@ export interface RunOptions {
   workDir: string;
   backend?: "docker" | "process" | "auto";
   onEvent?: RunEventHandler;
+  /**
+   * Called when the verdict blocks the merge. The run pauses here until it resolves — the
+   * dashboard resolves it when a reviewer clicks approve. Omitted for the CLI, which just reports.
+   */
+  awaitApproval?: () => Promise<{ by: string }>;
 }
 
 /** Replay every scenario in the set against one instance, resetting state between scenarios. */
@@ -30,7 +36,8 @@ async function replaySet(
   const runs: ScenarioRun[] = [];
   for (const scenarioId of scenarioIds) {
     await instance.reset();
-    emit({ type: "scenario:start", role: instance.role, scenarioId, title: scenarioId });
+    const title = deliveryScenarios.find((s) => s.id === scenarioId)?.title ?? scenarioId;
+    emit({ type: "scenario:start", role: instance.role, scenarioId, title });
     const run = await replayScenario(instance, scenarioId, (step) =>
       emit({ type: "step", role: instance.role, scenarioId, step })
     );
@@ -54,7 +61,18 @@ export async function runReplay(opts: RunOptions): Promise<RunResult> {
     await readFile(join(opts.scenarioDir, "scenario.json"), "utf8")
   ) as ScenarioManifest;
 
+  emit({
+    type: "meta",
+    scenarioId: scenario.id,
+    title: scenario.title,
+    baseBranch: scenario.baseBranch,
+    prBranch: scenario.prBranch,
+    replaySet: scenario.replaySet
+  });
   emit({ type: "phase", phase: "materialize", message: "Materialising base and PR branches" });
+  emit({ type: "boot", role: "base", status: "starting", backend: opts.backend ?? "auto" });
+  emit({ type: "boot", role: "pr", status: "starting", backend: opts.backend ?? "auto" });
+
   const sandbox = await createSandbox({
     targetDir: opts.targetDir,
     scenarioDir: opts.scenarioDir,
@@ -81,6 +99,12 @@ export async function runReplay(opts: RunOptions): Promise<RunResult> {
       prBranch: scenario.prBranch
     });
     emit({ type: "verdict", verdict });
+
+    if (verdict.gate === "block" && opts.awaitApproval) {
+      emit({ type: "awaiting-approval", scenarioId: scenario.id });
+      const { by } = await opts.awaitApproval();
+      emit({ type: "approved", scenarioId: scenario.id, by });
+    }
 
     emit({ type: "phase", phase: "done", message: verdict.headline });
 

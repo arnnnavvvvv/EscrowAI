@@ -1,0 +1,24 @@
+{
+  "name": "@escrowai/landing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Static landing page — demo video and a recorded run replayed through the shared UI in demo mode.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@escrowai/protocol": "*",
+    "@escrowai/ui": "*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "vite": "^8.2.2"
+  }
+}

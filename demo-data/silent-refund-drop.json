@@ -1,33 +1,573 @@
 {
-  "scenarioId": "silent-refund-drop",
-  "title": "Refactor Stripe event routing to a lookup table",
-  "backend": "docker",
-  "baseBranch": "main",
-  "prBranch": "pr/route-table-refactor",
-  "runs": {
-    "base": [
+  "result": {
+    "scenarioId": "silent-refund-drop",
+    "title": "Refactor Stripe event routing to a lookup table",
+    "backend": "docker",
+    "baseBranch": "main",
+    "prBranch": "pr/route-table-refactor",
+    "runs": {
+      "base": [
+        {
+          "scenarioId": "ordered-lifecycle",
+          "title": "Ordered lifecycle — capture then refund",
+          "steps": [
+            {
+              "label": "capture delivered",
+              "fixtureId": "stripe.succeeded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            },
+            {
+              "label": "refund delivered",
+              "fixtureId": "stripe.refunded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            }
+          ],
+          "effects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "refund_confirmation"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "duplicate-delivery",
+          "title": "Duplicate delivery — same event twice",
+          "steps": [
+            {
+              "label": "first delivery",
+              "fixtureId": "stripe.succeeded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            },
+            {
+              "label": "redelivery (same event id)",
+              "fixtureId": "stripe.succeeded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true,
+                "duplicate": true
+              }
+            }
+          ],
+          "effects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "out-of-order-refund",
+          "title": "Out-of-order — refund before capture",
+          "steps": [
+            {
+              "label": "refund arrives first",
+              "fixtureId": "stripe.refunded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            },
+            {
+              "label": "capture arrives second",
+              "fixtureId": "stripe.succeeded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            }
+          ],
+          "effects": [
+            {
+              "kind": "refund.queued",
+              "moneyMoving": false,
+              "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "refund_confirmation"
+              }
+            },
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "retry-after-failure",
+          "title": "Retry after failure — provider redelivers",
+          "steps": [
+            {
+              "label": "delivery (fails once, then retried)",
+              "fixtureId": "razorpay.succeeded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            }
+          ],
+          "effects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "payment_receipt"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "duplicate-refund",
+          "title": "Duplicate refund — refund event twice",
+          "steps": [
+            {
+              "label": "capture (sets up the refund)",
+              "fixtureId": "razorpay.succeeded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            },
+            {
+              "label": "first refund delivery",
+              "fixtureId": "razorpay.refunded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            },
+            {
+              "label": "refund redelivery",
+              "fixtureId": "razorpay.refunded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true,
+                "duplicate": true
+              }
+            }
+          ],
+          "effects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "payment_receipt"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "refund_confirmation"
+              }
+            }
+          ]
+        }
+      ],
+      "pr": [
+        {
+          "scenarioId": "ordered-lifecycle",
+          "title": "Ordered lifecycle — capture then refund",
+          "steps": [
+            {
+              "label": "capture delivered",
+              "fixtureId": "stripe.succeeded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            },
+            {
+              "label": "refund delivered",
+              "fixtureId": "stripe.refunded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            }
+          ],
+          "effects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            },
+            {
+              "kind": "ignored",
+              "moneyMoving": false,
+              "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+              "detail": {
+                "eventType": "charge.refunded"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "duplicate-delivery",
+          "title": "Duplicate delivery — same event twice",
+          "steps": [
+            {
+              "label": "first delivery",
+              "fixtureId": "stripe.succeeded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            },
+            {
+              "label": "redelivery (same event id)",
+              "fixtureId": "stripe.succeeded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true,
+                "duplicate": true
+              }
+            }
+          ],
+          "effects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "out-of-order-refund",
+          "title": "Out-of-order — refund before capture",
+          "steps": [
+            {
+              "label": "refund arrives first",
+              "fixtureId": "stripe.refunded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            },
+            {
+              "label": "capture arrives second",
+              "fixtureId": "stripe.succeeded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            }
+          ],
+          "effects": [
+            {
+              "kind": "ignored",
+              "moneyMoving": false,
+              "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+              "detail": {
+                "eventType": "charge.refunded"
+              }
+            },
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "retry-after-failure",
+          "title": "Retry after failure — provider redelivers",
+          "steps": [
+            {
+              "label": "delivery (fails once, then retried)",
+              "fixtureId": "razorpay.succeeded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            }
+          ],
+          "effects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "payment_receipt"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "duplicate-refund",
+          "title": "Duplicate refund — refund event twice",
+          "steps": [
+            {
+              "label": "capture (sets up the refund)",
+              "fixtureId": "razorpay.succeeded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            },
+            {
+              "label": "first refund delivery",
+              "fixtureId": "razorpay.refunded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true
+              }
+            },
+            {
+              "label": "refund redelivery",
+              "fixtureId": "razorpay.refunded",
+              "httpStatus": 200,
+              "responseBody": {
+                "received": true,
+                "duplicate": true
+              }
+            }
+          ],
+          "effects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "payment_receipt"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "refund_confirmation"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "diffs": [
       {
         "scenarioId": "ordered-lifecycle",
         "title": "Ordered lifecycle — capture then refund",
-        "steps": [
-          {
-            "label": "capture delivered",
-            "fixtureId": "stripe.succeeded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
-            }
-          },
-          {
-            "label": "refund delivered",
-            "fixtureId": "stripe.refunded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
-            }
-          }
-        ],
-        "effects": [
+        "classification": "silent-drop",
+        "baseEffects": [
           {
             "kind": "ledger.credit",
             "moneyMoving": true,
@@ -68,31 +608,81 @@
               "template": "refund_confirmation"
             }
           }
-        ]
+        ],
+        "prEffects": [
+          {
+            "kind": "ledger.credit",
+            "moneyMoving": true,
+            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+            "detail": {
+              "accountId": "acct_5521",
+              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+              "amount": 4999,
+              "currency": "usd"
+            }
+          },
+          {
+            "kind": "notification.send",
+            "moneyMoving": false,
+            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+            "detail": {
+              "accountId": "acct_5521",
+              "template": "payment_receipt"
+            }
+          },
+          {
+            "kind": "ignored",
+            "moneyMoving": false,
+            "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+            "detail": {
+              "eventType": "charge.refunded"
+            }
+          }
+        ],
+        "missingInPr": [
+          {
+            "kind": "ledger.debit",
+            "moneyMoving": true,
+            "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+            "detail": {
+              "accountId": "acct_5521",
+              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+              "amount": 4999,
+              "currency": "usd"
+            }
+          },
+          {
+            "kind": "notification.send",
+            "moneyMoving": false,
+            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+            "detail": {
+              "accountId": "acct_5521",
+              "template": "refund_confirmation"
+            }
+          }
+        ],
+        "addedInPr": [
+          {
+            "kind": "ignored",
+            "moneyMoving": false,
+            "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+            "detail": {
+              "eventType": "charge.refunded"
+            }
+          }
+        ],
+        "moneyMoving": {
+          "droppedCount": 1,
+          "addedCount": 0
+        },
+        "httpMasked": true,
+        "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
       },
       {
         "scenarioId": "duplicate-delivery",
         "title": "Duplicate delivery — same event twice",
-        "steps": [
-          {
-            "label": "first delivery",
-            "fixtureId": "stripe.succeeded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
-            }
-          },
-          {
-            "label": "redelivery (same event id)",
-            "fixtureId": "stripe.succeeded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true,
-              "duplicate": true
-            }
-          }
-        ],
-        "effects": [
+        "classification": "unaffected",
+        "baseEffects": [
           {
             "kind": "ledger.credit",
             "moneyMoving": true,
@@ -113,30 +703,43 @@
               "template": "payment_receipt"
             }
           }
-        ]
+        ],
+        "prEffects": [
+          {
+            "kind": "ledger.credit",
+            "moneyMoving": true,
+            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+            "detail": {
+              "accountId": "acct_5521",
+              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+              "amount": 4999,
+              "currency": "usd"
+            }
+          },
+          {
+            "kind": "notification.send",
+            "moneyMoving": false,
+            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+            "detail": {
+              "accountId": "acct_5521",
+              "template": "payment_receipt"
+            }
+          }
+        ],
+        "missingInPr": [],
+        "addedInPr": [],
+        "moneyMoving": {
+          "droppedCount": 0,
+          "addedCount": 0
+        },
+        "httpMasked": true,
+        "narrative": "Both branches produced the same effects, in the same order."
       },
       {
         "scenarioId": "out-of-order-refund",
         "title": "Out-of-order — refund before capture",
-        "steps": [
-          {
-            "label": "refund arrives first",
-            "fixtureId": "stripe.refunded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
-            }
-          },
-          {
-            "label": "capture arrives second",
-            "fixtureId": "stripe.succeeded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
-            }
-          }
-        ],
-        "effects": [
+        "classification": "silent-drop",
+        "baseEffects": [
           {
             "kind": "refund.queued",
             "moneyMoving": false,
@@ -188,22 +791,92 @@
               "template": "payment_receipt"
             }
           }
-        ]
+        ],
+        "prEffects": [
+          {
+            "kind": "ignored",
+            "moneyMoving": false,
+            "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+            "detail": {
+              "eventType": "charge.refunded"
+            }
+          },
+          {
+            "kind": "ledger.credit",
+            "moneyMoving": true,
+            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+            "detail": {
+              "accountId": "acct_5521",
+              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+              "amount": 4999,
+              "currency": "usd"
+            }
+          },
+          {
+            "kind": "notification.send",
+            "moneyMoving": false,
+            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+            "detail": {
+              "accountId": "acct_5521",
+              "template": "payment_receipt"
+            }
+          }
+        ],
+        "missingInPr": [
+          {
+            "kind": "refund.queued",
+            "moneyMoving": false,
+            "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+            "detail": {
+              "accountId": "acct_5521",
+              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+              "amount": 4999,
+              "currency": "usd"
+            }
+          },
+          {
+            "kind": "notification.send",
+            "moneyMoving": false,
+            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+            "detail": {
+              "accountId": "acct_5521",
+              "template": "refund_confirmation"
+            }
+          },
+          {
+            "kind": "ledger.debit",
+            "moneyMoving": true,
+            "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+            "detail": {
+              "accountId": "acct_5521",
+              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+              "amount": 4999,
+              "currency": "usd"
+            }
+          }
+        ],
+        "addedInPr": [
+          {
+            "kind": "ignored",
+            "moneyMoving": false,
+            "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+            "detail": {
+              "eventType": "charge.refunded"
+            }
+          }
+        ],
+        "moneyMoving": {
+          "droppedCount": 1,
+          "addedCount": 0
+        },
+        "httpMasked": true,
+        "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
       },
       {
         "scenarioId": "retry-after-failure",
         "title": "Retry after failure — provider redelivers",
-        "steps": [
-          {
-            "label": "delivery (fails once, then retried)",
-            "fixtureId": "razorpay.succeeded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
-            }
-          }
-        ],
-        "effects": [
+        "classification": "unaffected",
+        "baseEffects": [
           {
             "kind": "ledger.credit",
             "moneyMoving": true,
@@ -224,39 +897,43 @@
               "template": "payment_receipt"
             }
           }
-        ]
+        ],
+        "prEffects": [
+          {
+            "kind": "ledger.credit",
+            "moneyMoving": true,
+            "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+            "detail": {
+              "accountId": "acct_7734",
+              "paymentId": "pay_PmQ8sK2eZvKYlo",
+              "amount": 499000,
+              "currency": "INR"
+            }
+          },
+          {
+            "kind": "notification.send",
+            "moneyMoving": false,
+            "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+            "detail": {
+              "accountId": "acct_7734",
+              "template": "payment_receipt"
+            }
+          }
+        ],
+        "missingInPr": [],
+        "addedInPr": [],
+        "moneyMoving": {
+          "droppedCount": 0,
+          "addedCount": 0
+        },
+        "httpMasked": true,
+        "narrative": "Both branches produced the same effects, in the same order."
       },
       {
         "scenarioId": "duplicate-refund",
         "title": "Duplicate refund — refund event twice",
-        "steps": [
-          {
-            "label": "capture (sets up the refund)",
-            "fixtureId": "razorpay.succeeded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
-            }
-          },
-          {
-            "label": "first refund delivery",
-            "fixtureId": "razorpay.refunded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
-            }
-          },
-          {
-            "label": "refund redelivery",
-            "fixtureId": "razorpay.refunded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true,
-              "duplicate": true
-            }
-          }
-        ],
-        "effects": [
+        "classification": "unaffected",
+        "baseEffects": [
           {
             "kind": "ledger.credit",
             "moneyMoving": true,
@@ -297,1459 +974,2831 @@
               "template": "refund_confirmation"
             }
           }
-        ]
+        ],
+        "prEffects": [
+          {
+            "kind": "ledger.credit",
+            "moneyMoving": true,
+            "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+            "detail": {
+              "accountId": "acct_7734",
+              "paymentId": "pay_PmQ8sK2eZvKYlo",
+              "amount": 499000,
+              "currency": "INR"
+            }
+          },
+          {
+            "kind": "notification.send",
+            "moneyMoving": false,
+            "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+            "detail": {
+              "accountId": "acct_7734",
+              "template": "payment_receipt"
+            }
+          },
+          {
+            "kind": "ledger.debit",
+            "moneyMoving": true,
+            "signature": "kind=ledger.debit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+            "detail": {
+              "accountId": "acct_7734",
+              "paymentId": "pay_PmQ8sK2eZvKYlo",
+              "amount": 499000,
+              "currency": "INR"
+            }
+          },
+          {
+            "kind": "notification.send",
+            "moneyMoving": false,
+            "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+            "detail": {
+              "accountId": "acct_7734",
+              "template": "refund_confirmation"
+            }
+          }
+        ],
+        "missingInPr": [],
+        "addedInPr": [],
+        "moneyMoving": {
+          "droppedCount": 0,
+          "addedCount": 0
+        },
+        "httpMasked": true,
+        "narrative": "Both branches produced the same effects, in the same order."
       }
     ],
-    "pr": [
-      {
-        "scenarioId": "ordered-lifecycle",
-        "title": "Ordered lifecycle — capture then refund",
-        "steps": [
-          {
-            "label": "capture delivered",
-            "fixtureId": "stripe.succeeded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
+    "verdict": {
+      "gate": "block",
+      "headline": "EscrowAI is blocking this merge — 2 payment behaviours would silently break",
+      "findings": [
+        {
+          "scenarioId": "ordered-lifecycle",
+          "title": "Ordered lifecycle — capture then refund",
+          "classification": "silent-drop",
+          "baseEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "refund_confirmation"
+              }
             }
+          ],
+          "prEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            },
+            {
+              "kind": "ignored",
+              "moneyMoving": false,
+              "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+              "detail": {
+                "eventType": "charge.refunded"
+              }
+            }
+          ],
+          "missingInPr": [
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "refund_confirmation"
+              }
+            }
+          ],
+          "addedInPr": [
+            {
+              "kind": "ignored",
+              "moneyMoving": false,
+              "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+              "detail": {
+                "eventType": "charge.refunded"
+              }
+            }
+          ],
+          "moneyMoving": {
+            "droppedCount": 1,
+            "addedCount": 0
           },
-          {
-            "label": "refund delivered",
-            "fixtureId": "stripe.refunded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
+          "httpMasked": true,
+          "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
+        },
+        {
+          "scenarioId": "out-of-order-refund",
+          "title": "Out-of-order — refund before capture",
+          "classification": "silent-drop",
+          "baseEffects": [
+            {
+              "kind": "refund.queued",
+              "moneyMoving": false,
+              "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "refund_confirmation"
+              }
+            },
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
             }
-          }
-        ],
-        "effects": [
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
+          ],
+          "prEffects": [
+            {
+              "kind": "ignored",
+              "moneyMoving": false,
+              "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+              "detail": {
+                "eventType": "charge.refunded"
+              }
+            },
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
             }
+          ],
+          "missingInPr": [
+            {
+              "kind": "refund.queued",
+              "moneyMoving": false,
+              "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "refund_confirmation"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            }
+          ],
+          "addedInPr": [
+            {
+              "kind": "ignored",
+              "moneyMoving": false,
+              "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+              "detail": {
+                "eventType": "charge.refunded"
+              }
+            }
+          ],
+          "moneyMoving": {
+            "droppedCount": 1,
+            "addedCount": 0
           },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "payment_receipt"
+          "httpMasked": true,
+          "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
+        }
+      ],
+      "all": [
+        {
+          "scenarioId": "ordered-lifecycle",
+          "title": "Ordered lifecycle — capture then refund",
+          "classification": "silent-drop",
+          "baseEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "refund_confirmation"
+              }
             }
+          ],
+          "prEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            },
+            {
+              "kind": "ignored",
+              "moneyMoving": false,
+              "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+              "detail": {
+                "eventType": "charge.refunded"
+              }
+            }
+          ],
+          "missingInPr": [
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "refund_confirmation"
+              }
+            }
+          ],
+          "addedInPr": [
+            {
+              "kind": "ignored",
+              "moneyMoving": false,
+              "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+              "detail": {
+                "eventType": "charge.refunded"
+              }
+            }
+          ],
+          "moneyMoving": {
+            "droppedCount": 1,
+            "addedCount": 0
           },
-          {
-            "kind": "ignored",
-            "moneyMoving": false,
-            "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
-            "detail": {
-              "eventType": "charge.refunded"
+          "httpMasked": true,
+          "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
+        },
+        {
+          "scenarioId": "duplicate-delivery",
+          "title": "Duplicate delivery — same event twice",
+          "classification": "unaffected",
+          "baseEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
             }
-          }
-        ]
-      },
-      {
-        "scenarioId": "duplicate-delivery",
-        "title": "Duplicate delivery — same event twice",
-        "steps": [
-          {
-            "label": "first delivery",
-            "fixtureId": "stripe.succeeded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
+          ],
+          "prEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
             }
+          ],
+          "missingInPr": [],
+          "addedInPr": [],
+          "moneyMoving": {
+            "droppedCount": 0,
+            "addedCount": 0
           },
-          {
-            "label": "redelivery (same event id)",
-            "fixtureId": "stripe.succeeded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true,
-              "duplicate": true
+          "httpMasked": true,
+          "narrative": "Both branches produced the same effects, in the same order."
+        },
+        {
+          "scenarioId": "out-of-order-refund",
+          "title": "Out-of-order — refund before capture",
+          "classification": "silent-drop",
+          "baseEffects": [
+            {
+              "kind": "refund.queued",
+              "moneyMoving": false,
+              "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "refund_confirmation"
+              }
+            },
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
             }
-          }
-        ],
-        "effects": [
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
+          ],
+          "prEffects": [
+            {
+              "kind": "ignored",
+              "moneyMoving": false,
+              "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+              "detail": {
+                "eventType": "charge.refunded"
+              }
+            },
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
             }
+          ],
+          "missingInPr": [
+            {
+              "kind": "refund.queued",
+              "moneyMoving": false,
+              "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "refund_confirmation"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            }
+          ],
+          "addedInPr": [
+            {
+              "kind": "ignored",
+              "moneyMoving": false,
+              "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+              "detail": {
+                "eventType": "charge.refunded"
+              }
+            }
+          ],
+          "moneyMoving": {
+            "droppedCount": 1,
+            "addedCount": 0
           },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "payment_receipt"
+          "httpMasked": true,
+          "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
+        },
+        {
+          "scenarioId": "retry-after-failure",
+          "title": "Retry after failure — provider redelivers",
+          "classification": "unaffected",
+          "baseEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "payment_receipt"
+              }
             }
-          }
-        ]
-      },
-      {
-        "scenarioId": "out-of-order-refund",
-        "title": "Out-of-order — refund before capture",
-        "steps": [
-          {
-            "label": "refund arrives first",
-            "fixtureId": "stripe.refunded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
+          ],
+          "prEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "payment_receipt"
+              }
             }
+          ],
+          "missingInPr": [],
+          "addedInPr": [],
+          "moneyMoving": {
+            "droppedCount": 0,
+            "addedCount": 0
           },
-          {
-            "label": "capture arrives second",
-            "fixtureId": "stripe.succeeded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
+          "httpMasked": true,
+          "narrative": "Both branches produced the same effects, in the same order."
+        },
+        {
+          "scenarioId": "duplicate-refund",
+          "title": "Duplicate refund — refund event twice",
+          "classification": "unaffected",
+          "baseEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "payment_receipt"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "refund_confirmation"
+              }
             }
-          }
-        ],
-        "effects": [
-          {
-            "kind": "ignored",
-            "moneyMoving": false,
-            "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
-            "detail": {
-              "eventType": "charge.refunded"
+          ],
+          "prEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "payment_receipt"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "refund_confirmation"
+              }
             }
+          ],
+          "missingInPr": [],
+          "addedInPr": [],
+          "moneyMoving": {
+            "droppedCount": 0,
+            "addedCount": 0
           },
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "payment_receipt"
-            }
-          }
-        ]
-      },
-      {
-        "scenarioId": "retry-after-failure",
-        "title": "Retry after failure — provider redelivers",
-        "steps": [
-          {
-            "label": "delivery (fails once, then retried)",
-            "fixtureId": "razorpay.succeeded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
-            }
-          }
-        ],
-        "effects": [
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "paymentId": "pay_PmQ8sK2eZvKYlo",
-              "amount": 499000,
-              "currency": "INR"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "template": "payment_receipt"
-            }
-          }
-        ]
-      },
-      {
-        "scenarioId": "duplicate-refund",
-        "title": "Duplicate refund — refund event twice",
-        "steps": [
-          {
-            "label": "capture (sets up the refund)",
-            "fixtureId": "razorpay.succeeded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
-            }
-          },
-          {
-            "label": "first refund delivery",
-            "fixtureId": "razorpay.refunded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true
-            }
-          },
-          {
-            "label": "refund redelivery",
-            "fixtureId": "razorpay.refunded",
-            "httpStatus": 200,
-            "responseBody": {
-              "received": true,
-              "duplicate": true
-            }
-          }
-        ],
-        "effects": [
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "paymentId": "pay_PmQ8sK2eZvKYlo",
-              "amount": 499000,
-              "currency": "INR"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "template": "payment_receipt"
-            }
-          },
-          {
-            "kind": "ledger.debit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.debit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "paymentId": "pay_PmQ8sK2eZvKYlo",
-              "amount": 499000,
-              "currency": "INR"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "template": "refund_confirmation"
-            }
-          }
+          "httpMasked": true,
+          "narrative": "Both branches produced the same effects, in the same order."
+        }
+      ],
+      "markdown": "## EscrowAI is blocking this merge — 2 payment behaviours would silently break\n\nReplayed the webhook fixture library against `pr/route-table-refactor` and the base branch in an isolated sandbox. 5 scenarios checked.\n\n### What would break\n\n**Ordered lifecycle — capture then refund** — SILENT DROP\n\nThe PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced.\n\nEffects the base branch produced that this PR does not:\n- `ledger.debit` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n- `notification.send` (accountId acct_5521, template refund_confirmation)\n\nEffects this PR produces that the base branch does not:\n- `ignored` (eventType charge.refunded)\n\n> Every delivery still returned a success status. Nothing here shows up in logs or metrics.\n\n**Out-of-order — refund before capture** — SILENT DROP\n\nThe PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced.\n\nEffects the base branch produced that this PR does not:\n- `refund.queued` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n- `notification.send` (accountId acct_5521, template refund_confirmation)\n- `ledger.debit` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n\nEffects this PR produces that the base branch does not:\n- `ignored` (eventType charge.refunded)\n\n> Every delivery still returned a success status. Nothing here shows up in logs or metrics.\n\n### Unaffected\nDuplicate delivery — same event twice · Retry after failure — provider redelivers · Duplicate refund — refund event twice\n\n---\nMerge is held until a human reviews the replay diff and approves in the EscrowAI dashboard."
+    },
+    "startedAt": "2026-08-29T23:39:28.559Z",
+    "finishedAt": "2026-08-29T23:39:59.313Z"
+  },
+  "timeline": [
+    {
+      "t": 10,
+      "event": {
+        "type": "meta",
+        "scenarioId": "silent-refund-drop",
+        "title": "Refactor Stripe event routing to a lookup table",
+        "baseBranch": "main",
+        "prBranch": "pr/route-table-refactor",
+        "replaySet": [
+          "ordered-lifecycle",
+          "duplicate-delivery",
+          "out-of-order-refund",
+          "retry-after-failure",
+          "duplicate-refund"
         ]
       }
-    ]
-  },
-  "diffs": [
-    {
-      "scenarioId": "ordered-lifecycle",
-      "title": "Ordered lifecycle — capture then refund",
-      "classification": "silent-drop",
-      "baseEffects": [
-        {
-          "kind": "ledger.credit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-            "amount": 4999,
-            "currency": "usd"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "template": "payment_receipt"
-          }
-        },
-        {
-          "kind": "ledger.debit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-            "amount": 4999,
-            "currency": "usd"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "template": "refund_confirmation"
-          }
-        }
-      ],
-      "prEffects": [
-        {
-          "kind": "ledger.credit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-            "amount": 4999,
-            "currency": "usd"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "template": "payment_receipt"
-          }
-        },
-        {
-          "kind": "ignored",
-          "moneyMoving": false,
-          "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
-          "detail": {
-            "eventType": "charge.refunded"
-          }
-        }
-      ],
-      "missingInPr": [
-        {
-          "kind": "ledger.debit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-            "amount": 4999,
-            "currency": "usd"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "template": "refund_confirmation"
-          }
-        }
-      ],
-      "addedInPr": [
-        {
-          "kind": "ignored",
-          "moneyMoving": false,
-          "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
-          "detail": {
-            "eventType": "charge.refunded"
-          }
-        }
-      ],
-      "moneyMoving": {
-        "droppedCount": 1,
-        "addedCount": 0
-      },
-      "httpMasked": true,
-      "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
     },
     {
-      "scenarioId": "duplicate-delivery",
-      "title": "Duplicate delivery — same event twice",
-      "classification": "unaffected",
-      "baseEffects": [
-        {
-          "kind": "ledger.credit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-            "amount": 4999,
-            "currency": "usd"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "template": "payment_receipt"
-          }
-        }
-      ],
-      "prEffects": [
-        {
-          "kind": "ledger.credit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-            "amount": 4999,
-            "currency": "usd"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "template": "payment_receipt"
-          }
-        }
-      ],
-      "missingInPr": [],
-      "addedInPr": [],
-      "moneyMoving": {
-        "droppedCount": 0,
-        "addedCount": 0
-      },
-      "httpMasked": true,
-      "narrative": "Both branches produced the same effects, in the same order."
+      "t": 10,
+      "event": {
+        "type": "phase",
+        "phase": "materialize",
+        "message": "Materialising base and PR branches"
+      }
     },
     {
-      "scenarioId": "out-of-order-refund",
-      "title": "Out-of-order — refund before capture",
-      "classification": "silent-drop",
-      "baseEffects": [
-        {
-          "kind": "refund.queued",
-          "moneyMoving": false,
-          "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-            "amount": 4999,
-            "currency": "usd"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "template": "refund_confirmation"
-          }
-        },
-        {
-          "kind": "ledger.credit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-            "amount": 4999,
-            "currency": "usd"
-          }
-        },
-        {
-          "kind": "ledger.debit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-            "amount": 4999,
-            "currency": "usd"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "template": "payment_receipt"
-          }
-        }
-      ],
-      "prEffects": [
-        {
-          "kind": "ignored",
-          "moneyMoving": false,
-          "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
-          "detail": {
-            "eventType": "charge.refunded"
-          }
-        },
-        {
-          "kind": "ledger.credit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-            "amount": 4999,
-            "currency": "usd"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "template": "payment_receipt"
-          }
-        }
-      ],
-      "missingInPr": [
-        {
-          "kind": "refund.queued",
-          "moneyMoving": false,
-          "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-            "amount": 4999,
-            "currency": "usd"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "template": "refund_confirmation"
-          }
-        },
-        {
-          "kind": "ledger.debit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-          "detail": {
-            "accountId": "acct_5521",
-            "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-            "amount": 4999,
-            "currency": "usd"
-          }
-        }
-      ],
-      "addedInPr": [
-        {
-          "kind": "ignored",
-          "moneyMoving": false,
-          "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
-          "detail": {
-            "eventType": "charge.refunded"
-          }
-        }
-      ],
-      "moneyMoving": {
-        "droppedCount": 1,
-        "addedCount": 0
-      },
-      "httpMasked": true,
-      "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
+      "t": 10,
+      "event": {
+        "type": "boot",
+        "role": "base",
+        "status": "starting",
+        "backend": "docker"
+      }
     },
     {
-      "scenarioId": "retry-after-failure",
-      "title": "Retry after failure — provider redelivers",
-      "classification": "unaffected",
-      "baseEffects": [
-        {
-          "kind": "ledger.credit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-          "detail": {
-            "accountId": "acct_7734",
-            "paymentId": "pay_PmQ8sK2eZvKYlo",
-            "amount": 499000,
-            "currency": "INR"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-          "detail": {
-            "accountId": "acct_7734",
-            "template": "payment_receipt"
-          }
-        }
-      ],
-      "prEffects": [
-        {
-          "kind": "ledger.credit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-          "detail": {
-            "accountId": "acct_7734",
-            "paymentId": "pay_PmQ8sK2eZvKYlo",
-            "amount": 499000,
-            "currency": "INR"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-          "detail": {
-            "accountId": "acct_7734",
-            "template": "payment_receipt"
-          }
-        }
-      ],
-      "missingInPr": [],
-      "addedInPr": [],
-      "moneyMoving": {
-        "droppedCount": 0,
-        "addedCount": 0
-      },
-      "httpMasked": true,
-      "narrative": "Both branches produced the same effects, in the same order."
+      "t": 10,
+      "event": {
+        "type": "boot",
+        "role": "pr",
+        "status": "starting",
+        "backend": "docker"
+      }
     },
     {
-      "scenarioId": "duplicate-refund",
-      "title": "Duplicate refund — refund event twice",
-      "classification": "unaffected",
-      "baseEffects": [
-        {
-          "kind": "ledger.credit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-          "detail": {
-            "accountId": "acct_7734",
-            "paymentId": "pay_PmQ8sK2eZvKYlo",
-            "amount": 499000,
-            "currency": "INR"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-          "detail": {
-            "accountId": "acct_7734",
-            "template": "payment_receipt"
-          }
-        },
-        {
-          "kind": "ledger.debit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.debit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-          "detail": {
-            "accountId": "acct_7734",
-            "paymentId": "pay_PmQ8sK2eZvKYlo",
-            "amount": 499000,
-            "currency": "INR"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-          "detail": {
-            "accountId": "acct_7734",
-            "template": "refund_confirmation"
+      "t": 14,
+      "event": {
+        "type": "progress",
+        "message": "copying target source"
+      }
+    },
+    {
+      "t": 73,
+      "event": {
+        "type": "progress",
+        "message": "initialising git repo, committing main"
+      }
+    },
+    {
+      "t": 804,
+      "event": {
+        "type": "progress",
+        "message": "branching pr/route-table-refactor, applying scenario patch"
+      }
+    },
+    {
+      "t": 1375,
+      "event": {
+        "type": "progress",
+        "message": "checking out base and PR working trees"
+      }
+    },
+    {
+      "t": 1773,
+      "event": {
+        "type": "progress",
+        "message": "base: docker build"
+      }
+    },
+    {
+      "t": 3514,
+      "event": {
+        "type": "progress",
+        "message": "base: docker run → :58846"
+      }
+    },
+    {
+      "t": 4264,
+      "event": {
+        "type": "progress",
+        "message": "base: healthy"
+      }
+    },
+    {
+      "t": 4265,
+      "event": {
+        "type": "progress",
+        "message": "pr: docker build"
+      }
+    },
+    {
+      "t": 5876,
+      "event": {
+        "type": "progress",
+        "message": "pr: docker run → :58849"
+      }
+    },
+    {
+      "t": 6865,
+      "event": {
+        "type": "progress",
+        "message": "pr: healthy"
+      }
+    },
+    {
+      "t": 6865,
+      "event": {
+        "type": "boot",
+        "role": "base",
+        "status": "healthy",
+        "backend": "docker"
+      }
+    },
+    {
+      "t": 6865,
+      "event": {
+        "type": "boot",
+        "role": "pr",
+        "status": "healthy",
+        "backend": "docker"
+      }
+    },
+    {
+      "t": 6865,
+      "event": {
+        "type": "phase",
+        "phase": "replay",
+        "message": "Replaying the fixture library against both branches"
+      }
+    },
+    {
+      "t": 7802,
+      "event": {
+        "type": "progress",
+        "message": "base: docker run → :58854"
+      }
+    },
+    {
+      "t": 8838,
+      "event": {
+        "type": "progress",
+        "message": "base: healthy"
+      }
+    },
+    {
+      "t": 8839,
+      "event": {
+        "type": "scenario:start",
+        "role": "base",
+        "scenarioId": "ordered-lifecycle",
+        "title": "Ordered lifecycle — capture then refund"
+      }
+    },
+    {
+      "t": 8857,
+      "event": {
+        "type": "step",
+        "role": "base",
+        "scenarioId": "ordered-lifecycle",
+        "step": {
+          "label": "capture delivered",
+          "fixtureId": "stripe.succeeded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
           }
         }
-      ],
-      "prEffects": [
-        {
-          "kind": "ledger.credit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-          "detail": {
-            "accountId": "acct_7734",
-            "paymentId": "pay_PmQ8sK2eZvKYlo",
-            "amount": 499000,
-            "currency": "INR"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-          "detail": {
-            "accountId": "acct_7734",
-            "template": "payment_receipt"
-          }
-        },
-        {
-          "kind": "ledger.debit",
-          "moneyMoving": true,
-          "signature": "kind=ledger.debit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-          "detail": {
-            "accountId": "acct_7734",
-            "paymentId": "pay_PmQ8sK2eZvKYlo",
-            "amount": 499000,
-            "currency": "INR"
-          }
-        },
-        {
-          "kind": "notification.send",
-          "moneyMoving": false,
-          "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-          "detail": {
-            "accountId": "acct_7734",
-            "template": "refund_confirmation"
+      }
+    },
+    {
+      "t": 9089,
+      "event": {
+        "type": "step",
+        "role": "base",
+        "scenarioId": "ordered-lifecycle",
+        "step": {
+          "label": "refund delivered",
+          "fixtureId": "stripe.refunded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
           }
         }
-      ],
-      "missingInPr": [],
-      "addedInPr": [],
-      "moneyMoving": {
-        "droppedCount": 0,
-        "addedCount": 0
-      },
-      "httpMasked": true,
-      "narrative": "Both branches produced the same effects, in the same order."
+      }
+    },
+    {
+      "t": 9101,
+      "event": {
+        "type": "scenario:done",
+        "role": "base",
+        "scenarioId": "ordered-lifecycle",
+        "effectCount": 4
+      }
+    },
+    {
+      "t": 10109,
+      "event": {
+        "type": "progress",
+        "message": "base: docker run → :58860"
+      }
+    },
+    {
+      "t": 11103,
+      "event": {
+        "type": "progress",
+        "message": "base: healthy"
+      }
+    },
+    {
+      "t": 11103,
+      "event": {
+        "type": "scenario:start",
+        "role": "base",
+        "scenarioId": "duplicate-delivery",
+        "title": "Duplicate delivery — same event twice"
+      }
+    },
+    {
+      "t": 11124,
+      "event": {
+        "type": "step",
+        "role": "base",
+        "scenarioId": "duplicate-delivery",
+        "step": {
+          "label": "first delivery",
+          "fixtureId": "stripe.succeeded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
+          }
+        }
+      }
+    },
+    {
+      "t": 11293,
+      "event": {
+        "type": "step",
+        "role": "base",
+        "scenarioId": "duplicate-delivery",
+        "step": {
+          "label": "redelivery (same event id)",
+          "fixtureId": "stripe.succeeded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true,
+            "duplicate": true
+          }
+        }
+      }
+    },
+    {
+      "t": 11299,
+      "event": {
+        "type": "scenario:done",
+        "role": "base",
+        "scenarioId": "duplicate-delivery",
+        "effectCount": 2
+      }
+    },
+    {
+      "t": 12183,
+      "event": {
+        "type": "progress",
+        "message": "base: docker run → :58866"
+      }
+    },
+    {
+      "t": 13170,
+      "event": {
+        "type": "progress",
+        "message": "base: healthy"
+      }
+    },
+    {
+      "t": 13170,
+      "event": {
+        "type": "scenario:start",
+        "role": "base",
+        "scenarioId": "out-of-order-refund",
+        "title": "Out-of-order — refund before capture"
+      }
+    },
+    {
+      "t": 13186,
+      "event": {
+        "type": "step",
+        "role": "base",
+        "scenarioId": "out-of-order-refund",
+        "step": {
+          "label": "refund arrives first",
+          "fixtureId": "stripe.refunded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
+          }
+        }
+      }
+    },
+    {
+      "t": 13409,
+      "event": {
+        "type": "step",
+        "role": "base",
+        "scenarioId": "out-of-order-refund",
+        "step": {
+          "label": "capture arrives second",
+          "fixtureId": "stripe.succeeded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
+          }
+        }
+      }
+    },
+    {
+      "t": 13417,
+      "event": {
+        "type": "scenario:done",
+        "role": "base",
+        "scenarioId": "out-of-order-refund",
+        "effectCount": 5
+      }
+    },
+    {
+      "t": 14268,
+      "event": {
+        "type": "progress",
+        "message": "base: docker run → :58872"
+      }
+    },
+    {
+      "t": 15251,
+      "event": {
+        "type": "progress",
+        "message": "base: healthy"
+      }
+    },
+    {
+      "t": 15251,
+      "event": {
+        "type": "scenario:start",
+        "role": "base",
+        "scenarioId": "retry-after-failure",
+        "title": "Retry after failure — provider redelivers"
+      }
+    },
+    {
+      "t": 15329,
+      "event": {
+        "type": "step",
+        "role": "base",
+        "scenarioId": "retry-after-failure",
+        "step": {
+          "label": "delivery (fails once, then retried)",
+          "fixtureId": "razorpay.succeeded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
+          }
+        }
+      }
+    },
+    {
+      "t": 15334,
+      "event": {
+        "type": "scenario:done",
+        "role": "base",
+        "scenarioId": "retry-after-failure",
+        "effectCount": 2
+      }
+    },
+    {
+      "t": 16199,
+      "event": {
+        "type": "progress",
+        "message": "base: docker run → :58878"
+      }
+    },
+    {
+      "t": 17196,
+      "event": {
+        "type": "progress",
+        "message": "base: healthy"
+      }
+    },
+    {
+      "t": 17197,
+      "event": {
+        "type": "scenario:start",
+        "role": "base",
+        "scenarioId": "duplicate-refund",
+        "title": "Duplicate refund — refund event twice"
+      }
+    },
+    {
+      "t": 17205,
+      "event": {
+        "type": "step",
+        "role": "base",
+        "scenarioId": "duplicate-refund",
+        "step": {
+          "label": "capture (sets up the refund)",
+          "fixtureId": "razorpay.succeeded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
+          }
+        }
+      }
+    },
+    {
+      "t": 17374,
+      "event": {
+        "type": "step",
+        "role": "base",
+        "scenarioId": "duplicate-refund",
+        "step": {
+          "label": "first refund delivery",
+          "fixtureId": "razorpay.refunded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
+          }
+        }
+      }
+    },
+    {
+      "t": 17545,
+      "event": {
+        "type": "step",
+        "role": "base",
+        "scenarioId": "duplicate-refund",
+        "step": {
+          "label": "refund redelivery",
+          "fixtureId": "razorpay.refunded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true,
+            "duplicate": true
+          }
+        }
+      }
+    },
+    {
+      "t": 17550,
+      "event": {
+        "type": "scenario:done",
+        "role": "base",
+        "scenarioId": "duplicate-refund",
+        "effectCount": 4
+      }
+    },
+    {
+      "t": 18465,
+      "event": {
+        "type": "progress",
+        "message": "pr: docker run → :58884"
+      }
+    },
+    {
+      "t": 19479,
+      "event": {
+        "type": "progress",
+        "message": "pr: healthy"
+      }
+    },
+    {
+      "t": 19479,
+      "event": {
+        "type": "scenario:start",
+        "role": "pr",
+        "scenarioId": "ordered-lifecycle",
+        "title": "Ordered lifecycle — capture then refund"
+      }
+    },
+    {
+      "t": 19496,
+      "event": {
+        "type": "step",
+        "role": "pr",
+        "scenarioId": "ordered-lifecycle",
+        "step": {
+          "label": "capture delivered",
+          "fixtureId": "stripe.succeeded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
+          }
+        }
+      }
+    },
+    {
+      "t": 19706,
+      "event": {
+        "type": "step",
+        "role": "pr",
+        "scenarioId": "ordered-lifecycle",
+        "step": {
+          "label": "refund delivered",
+          "fixtureId": "stripe.refunded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
+          }
+        }
+      }
+    },
+    {
+      "t": 19714,
+      "event": {
+        "type": "scenario:done",
+        "role": "pr",
+        "scenarioId": "ordered-lifecycle",
+        "effectCount": 3
+      }
+    },
+    {
+      "t": 20609,
+      "event": {
+        "type": "progress",
+        "message": "pr: docker run → :58890"
+      }
+    },
+    {
+      "t": 21617,
+      "event": {
+        "type": "progress",
+        "message": "pr: healthy"
+      }
+    },
+    {
+      "t": 21618,
+      "event": {
+        "type": "scenario:start",
+        "role": "pr",
+        "scenarioId": "duplicate-delivery",
+        "title": "Duplicate delivery — same event twice"
+      }
+    },
+    {
+      "t": 21627,
+      "event": {
+        "type": "step",
+        "role": "pr",
+        "scenarioId": "duplicate-delivery",
+        "step": {
+          "label": "first delivery",
+          "fixtureId": "stripe.succeeded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
+          }
+        }
+      }
+    },
+    {
+      "t": 21790,
+      "event": {
+        "type": "step",
+        "role": "pr",
+        "scenarioId": "duplicate-delivery",
+        "step": {
+          "label": "redelivery (same event id)",
+          "fixtureId": "stripe.succeeded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true,
+            "duplicate": true
+          }
+        }
+      }
+    },
+    {
+      "t": 21795,
+      "event": {
+        "type": "scenario:done",
+        "role": "pr",
+        "scenarioId": "duplicate-delivery",
+        "effectCount": 2
+      }
+    },
+    {
+      "t": 22670,
+      "event": {
+        "type": "progress",
+        "message": "pr: docker run → :58896"
+      }
+    },
+    {
+      "t": 23704,
+      "event": {
+        "type": "progress",
+        "message": "pr: healthy"
+      }
+    },
+    {
+      "t": 23704,
+      "event": {
+        "type": "scenario:start",
+        "role": "pr",
+        "scenarioId": "out-of-order-refund",
+        "title": "Out-of-order — refund before capture"
+      }
+    },
+    {
+      "t": 23711,
+      "event": {
+        "type": "step",
+        "role": "pr",
+        "scenarioId": "out-of-order-refund",
+        "step": {
+          "label": "refund arrives first",
+          "fixtureId": "stripe.refunded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
+          }
+        }
+      }
+    },
+    {
+      "t": 23932,
+      "event": {
+        "type": "step",
+        "role": "pr",
+        "scenarioId": "out-of-order-refund",
+        "step": {
+          "label": "capture arrives second",
+          "fixtureId": "stripe.succeeded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
+          }
+        }
+      }
+    },
+    {
+      "t": 23936,
+      "event": {
+        "type": "scenario:done",
+        "role": "pr",
+        "scenarioId": "out-of-order-refund",
+        "effectCount": 3
+      }
+    },
+    {
+      "t": 24836,
+      "event": {
+        "type": "progress",
+        "message": "pr: docker run → :58902"
+      }
+    },
+    {
+      "t": 25790,
+      "event": {
+        "type": "progress",
+        "message": "pr: healthy"
+      }
+    },
+    {
+      "t": 25790,
+      "event": {
+        "type": "scenario:start",
+        "role": "pr",
+        "scenarioId": "retry-after-failure",
+        "title": "Retry after failure — provider redelivers"
+      }
+    },
+    {
+      "t": 25863,
+      "event": {
+        "type": "step",
+        "role": "pr",
+        "scenarioId": "retry-after-failure",
+        "step": {
+          "label": "delivery (fails once, then retried)",
+          "fixtureId": "razorpay.succeeded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
+          }
+        }
+      }
+    },
+    {
+      "t": 25868,
+      "event": {
+        "type": "scenario:done",
+        "role": "pr",
+        "scenarioId": "retry-after-failure",
+        "effectCount": 2
+      }
+    },
+    {
+      "t": 26745,
+      "event": {
+        "type": "progress",
+        "message": "pr: docker run → :58908"
+      }
+    },
+    {
+      "t": 27786,
+      "event": {
+        "type": "progress",
+        "message": "pr: healthy"
+      }
+    },
+    {
+      "t": 27786,
+      "event": {
+        "type": "scenario:start",
+        "role": "pr",
+        "scenarioId": "duplicate-refund",
+        "title": "Duplicate refund — refund event twice"
+      }
+    },
+    {
+      "t": 27805,
+      "event": {
+        "type": "step",
+        "role": "pr",
+        "scenarioId": "duplicate-refund",
+        "step": {
+          "label": "capture (sets up the refund)",
+          "fixtureId": "razorpay.succeeded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
+          }
+        }
+      }
+    },
+    {
+      "t": 27973,
+      "event": {
+        "type": "step",
+        "role": "pr",
+        "scenarioId": "duplicate-refund",
+        "step": {
+          "label": "first refund delivery",
+          "fixtureId": "razorpay.refunded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true
+          }
+        }
+      }
+    },
+    {
+      "t": 28142,
+      "event": {
+        "type": "step",
+        "role": "pr",
+        "scenarioId": "duplicate-refund",
+        "step": {
+          "label": "refund redelivery",
+          "fixtureId": "razorpay.refunded",
+          "httpStatus": 200,
+          "responseBody": {
+            "received": true,
+            "duplicate": true
+          }
+        }
+      }
+    },
+    {
+      "t": 28146,
+      "event": {
+        "type": "scenario:done",
+        "role": "pr",
+        "scenarioId": "duplicate-refund",
+        "effectCount": 4
+      }
+    },
+    {
+      "t": 28146,
+      "event": {
+        "type": "phase",
+        "phase": "diff",
+        "message": "Diffing behaviour per scenario"
+      }
+    },
+    {
+      "t": 28147,
+      "event": {
+        "type": "diff",
+        "diff": {
+          "scenarioId": "ordered-lifecycle",
+          "title": "Ordered lifecycle — capture then refund",
+          "classification": "silent-drop",
+          "baseEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "refund_confirmation"
+              }
+            }
+          ],
+          "prEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            },
+            {
+              "kind": "ignored",
+              "moneyMoving": false,
+              "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+              "detail": {
+                "eventType": "charge.refunded"
+              }
+            }
+          ],
+          "missingInPr": [
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "refund_confirmation"
+              }
+            }
+          ],
+          "addedInPr": [
+            {
+              "kind": "ignored",
+              "moneyMoving": false,
+              "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+              "detail": {
+                "eventType": "charge.refunded"
+              }
+            }
+          ],
+          "moneyMoving": {
+            "droppedCount": 1,
+            "addedCount": 0
+          },
+          "httpMasked": true,
+          "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
+        }
+      }
+    },
+    {
+      "t": 28147,
+      "event": {
+        "type": "diff",
+        "diff": {
+          "scenarioId": "duplicate-delivery",
+          "title": "Duplicate delivery — same event twice",
+          "classification": "unaffected",
+          "baseEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            }
+          ],
+          "prEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            }
+          ],
+          "missingInPr": [],
+          "addedInPr": [],
+          "moneyMoving": {
+            "droppedCount": 0,
+            "addedCount": 0
+          },
+          "httpMasked": true,
+          "narrative": "Both branches produced the same effects, in the same order."
+        }
+      }
+    },
+    {
+      "t": 28147,
+      "event": {
+        "type": "diff",
+        "diff": {
+          "scenarioId": "out-of-order-refund",
+          "title": "Out-of-order — refund before capture",
+          "classification": "silent-drop",
+          "baseEffects": [
+            {
+              "kind": "refund.queued",
+              "moneyMoving": false,
+              "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "refund_confirmation"
+              }
+            },
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            }
+          ],
+          "prEffects": [
+            {
+              "kind": "ignored",
+              "moneyMoving": false,
+              "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+              "detail": {
+                "eventType": "charge.refunded"
+              }
+            },
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "payment_receipt"
+              }
+            }
+          ],
+          "missingInPr": [
+            {
+              "kind": "refund.queued",
+              "moneyMoving": false,
+              "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "template": "refund_confirmation"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+              "detail": {
+                "accountId": "acct_5521",
+                "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                "amount": 4999,
+                "currency": "usd"
+              }
+            }
+          ],
+          "addedInPr": [
+            {
+              "kind": "ignored",
+              "moneyMoving": false,
+              "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+              "detail": {
+                "eventType": "charge.refunded"
+              }
+            }
+          ],
+          "moneyMoving": {
+            "droppedCount": 1,
+            "addedCount": 0
+          },
+          "httpMasked": true,
+          "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
+        }
+      }
+    },
+    {
+      "t": 28147,
+      "event": {
+        "type": "diff",
+        "diff": {
+          "scenarioId": "retry-after-failure",
+          "title": "Retry after failure — provider redelivers",
+          "classification": "unaffected",
+          "baseEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "payment_receipt"
+              }
+            }
+          ],
+          "prEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "payment_receipt"
+              }
+            }
+          ],
+          "missingInPr": [],
+          "addedInPr": [],
+          "moneyMoving": {
+            "droppedCount": 0,
+            "addedCount": 0
+          },
+          "httpMasked": true,
+          "narrative": "Both branches produced the same effects, in the same order."
+        }
+      }
+    },
+    {
+      "t": 28147,
+      "event": {
+        "type": "diff",
+        "diff": {
+          "scenarioId": "duplicate-refund",
+          "title": "Duplicate refund — refund event twice",
+          "classification": "unaffected",
+          "baseEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "payment_receipt"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "refund_confirmation"
+              }
+            }
+          ],
+          "prEffects": [
+            {
+              "kind": "ledger.credit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "payment_receipt"
+              }
+            },
+            {
+              "kind": "ledger.debit",
+              "moneyMoving": true,
+              "signature": "kind=ledger.debit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "paymentId": "pay_PmQ8sK2eZvKYlo",
+                "amount": 499000,
+                "currency": "INR"
+              }
+            },
+            {
+              "kind": "notification.send",
+              "moneyMoving": false,
+              "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+              "detail": {
+                "accountId": "acct_7734",
+                "template": "refund_confirmation"
+              }
+            }
+          ],
+          "missingInPr": [],
+          "addedInPr": [],
+          "moneyMoving": {
+            "droppedCount": 0,
+            "addedCount": 0
+          },
+          "httpMasked": true,
+          "narrative": "Both branches produced the same effects, in the same order."
+        }
+      }
+    },
+    {
+      "t": 28147,
+      "event": {
+        "type": "phase",
+        "phase": "verdict",
+        "message": "Assembling the verdict"
+      }
+    },
+    {
+      "t": 28148,
+      "event": {
+        "type": "verdict",
+        "verdict": {
+          "gate": "block",
+          "headline": "EscrowAI is blocking this merge — 2 payment behaviours would silently break",
+          "findings": [
+            {
+              "scenarioId": "ordered-lifecycle",
+              "title": "Ordered lifecycle — capture then refund",
+              "classification": "silent-drop",
+              "baseEffects": [
+                {
+                  "kind": "ledger.credit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "payment_receipt"
+                  }
+                },
+                {
+                  "kind": "ledger.debit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "refund_confirmation"
+                  }
+                }
+              ],
+              "prEffects": [
+                {
+                  "kind": "ledger.credit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "payment_receipt"
+                  }
+                },
+                {
+                  "kind": "ignored",
+                  "moneyMoving": false,
+                  "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+                  "detail": {
+                    "eventType": "charge.refunded"
+                  }
+                }
+              ],
+              "missingInPr": [
+                {
+                  "kind": "ledger.debit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "refund_confirmation"
+                  }
+                }
+              ],
+              "addedInPr": [
+                {
+                  "kind": "ignored",
+                  "moneyMoving": false,
+                  "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+                  "detail": {
+                    "eventType": "charge.refunded"
+                  }
+                }
+              ],
+              "moneyMoving": {
+                "droppedCount": 1,
+                "addedCount": 0
+              },
+              "httpMasked": true,
+              "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
+            },
+            {
+              "scenarioId": "out-of-order-refund",
+              "title": "Out-of-order — refund before capture",
+              "classification": "silent-drop",
+              "baseEffects": [
+                {
+                  "kind": "refund.queued",
+                  "moneyMoving": false,
+                  "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "refund_confirmation"
+                  }
+                },
+                {
+                  "kind": "ledger.credit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "ledger.debit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "payment_receipt"
+                  }
+                }
+              ],
+              "prEffects": [
+                {
+                  "kind": "ignored",
+                  "moneyMoving": false,
+                  "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+                  "detail": {
+                    "eventType": "charge.refunded"
+                  }
+                },
+                {
+                  "kind": "ledger.credit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "payment_receipt"
+                  }
+                }
+              ],
+              "missingInPr": [
+                {
+                  "kind": "refund.queued",
+                  "moneyMoving": false,
+                  "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "refund_confirmation"
+                  }
+                },
+                {
+                  "kind": "ledger.debit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                }
+              ],
+              "addedInPr": [
+                {
+                  "kind": "ignored",
+                  "moneyMoving": false,
+                  "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+                  "detail": {
+                    "eventType": "charge.refunded"
+                  }
+                }
+              ],
+              "moneyMoving": {
+                "droppedCount": 1,
+                "addedCount": 0
+              },
+              "httpMasked": true,
+              "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
+            }
+          ],
+          "all": [
+            {
+              "scenarioId": "ordered-lifecycle",
+              "title": "Ordered lifecycle — capture then refund",
+              "classification": "silent-drop",
+              "baseEffects": [
+                {
+                  "kind": "ledger.credit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "payment_receipt"
+                  }
+                },
+                {
+                  "kind": "ledger.debit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "refund_confirmation"
+                  }
+                }
+              ],
+              "prEffects": [
+                {
+                  "kind": "ledger.credit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "payment_receipt"
+                  }
+                },
+                {
+                  "kind": "ignored",
+                  "moneyMoving": false,
+                  "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+                  "detail": {
+                    "eventType": "charge.refunded"
+                  }
+                }
+              ],
+              "missingInPr": [
+                {
+                  "kind": "ledger.debit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "refund_confirmation"
+                  }
+                }
+              ],
+              "addedInPr": [
+                {
+                  "kind": "ignored",
+                  "moneyMoving": false,
+                  "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+                  "detail": {
+                    "eventType": "charge.refunded"
+                  }
+                }
+              ],
+              "moneyMoving": {
+                "droppedCount": 1,
+                "addedCount": 0
+              },
+              "httpMasked": true,
+              "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
+            },
+            {
+              "scenarioId": "duplicate-delivery",
+              "title": "Duplicate delivery — same event twice",
+              "classification": "unaffected",
+              "baseEffects": [
+                {
+                  "kind": "ledger.credit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "payment_receipt"
+                  }
+                }
+              ],
+              "prEffects": [
+                {
+                  "kind": "ledger.credit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "payment_receipt"
+                  }
+                }
+              ],
+              "missingInPr": [],
+              "addedInPr": [],
+              "moneyMoving": {
+                "droppedCount": 0,
+                "addedCount": 0
+              },
+              "httpMasked": true,
+              "narrative": "Both branches produced the same effects, in the same order."
+            },
+            {
+              "scenarioId": "out-of-order-refund",
+              "title": "Out-of-order — refund before capture",
+              "classification": "silent-drop",
+              "baseEffects": [
+                {
+                  "kind": "refund.queued",
+                  "moneyMoving": false,
+                  "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "refund_confirmation"
+                  }
+                },
+                {
+                  "kind": "ledger.credit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "ledger.debit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "payment_receipt"
+                  }
+                }
+              ],
+              "prEffects": [
+                {
+                  "kind": "ignored",
+                  "moneyMoving": false,
+                  "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+                  "detail": {
+                    "eventType": "charge.refunded"
+                  }
+                },
+                {
+                  "kind": "ledger.credit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "payment_receipt"
+                  }
+                }
+              ],
+              "missingInPr": [
+                {
+                  "kind": "refund.queued",
+                  "moneyMoving": false,
+                  "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "template": "refund_confirmation"
+                  }
+                },
+                {
+                  "kind": "ledger.debit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_5521",
+                    "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
+                    "amount": 4999,
+                    "currency": "usd"
+                  }
+                }
+              ],
+              "addedInPr": [
+                {
+                  "kind": "ignored",
+                  "moneyMoving": false,
+                  "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
+                  "detail": {
+                    "eventType": "charge.refunded"
+                  }
+                }
+              ],
+              "moneyMoving": {
+                "droppedCount": 1,
+                "addedCount": 0
+              },
+              "httpMasked": true,
+              "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
+            },
+            {
+              "scenarioId": "retry-after-failure",
+              "title": "Retry after failure — provider redelivers",
+              "classification": "unaffected",
+              "baseEffects": [
+                {
+                  "kind": "ledger.credit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_7734",
+                    "paymentId": "pay_PmQ8sK2eZvKYlo",
+                    "amount": 499000,
+                    "currency": "INR"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+                  "detail": {
+                    "accountId": "acct_7734",
+                    "template": "payment_receipt"
+                  }
+                }
+              ],
+              "prEffects": [
+                {
+                  "kind": "ledger.credit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_7734",
+                    "paymentId": "pay_PmQ8sK2eZvKYlo",
+                    "amount": 499000,
+                    "currency": "INR"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+                  "detail": {
+                    "accountId": "acct_7734",
+                    "template": "payment_receipt"
+                  }
+                }
+              ],
+              "missingInPr": [],
+              "addedInPr": [],
+              "moneyMoving": {
+                "droppedCount": 0,
+                "addedCount": 0
+              },
+              "httpMasked": true,
+              "narrative": "Both branches produced the same effects, in the same order."
+            },
+            {
+              "scenarioId": "duplicate-refund",
+              "title": "Duplicate refund — refund event twice",
+              "classification": "unaffected",
+              "baseEffects": [
+                {
+                  "kind": "ledger.credit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_7734",
+                    "paymentId": "pay_PmQ8sK2eZvKYlo",
+                    "amount": 499000,
+                    "currency": "INR"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+                  "detail": {
+                    "accountId": "acct_7734",
+                    "template": "payment_receipt"
+                  }
+                },
+                {
+                  "kind": "ledger.debit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.debit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_7734",
+                    "paymentId": "pay_PmQ8sK2eZvKYlo",
+                    "amount": 499000,
+                    "currency": "INR"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+                  "detail": {
+                    "accountId": "acct_7734",
+                    "template": "refund_confirmation"
+                  }
+                }
+              ],
+              "prEffects": [
+                {
+                  "kind": "ledger.credit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_7734",
+                    "paymentId": "pay_PmQ8sK2eZvKYlo",
+                    "amount": 499000,
+                    "currency": "INR"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
+                  "detail": {
+                    "accountId": "acct_7734",
+                    "template": "payment_receipt"
+                  }
+                },
+                {
+                  "kind": "ledger.debit",
+                  "moneyMoving": true,
+                  "signature": "kind=ledger.debit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
+                  "detail": {
+                    "accountId": "acct_7734",
+                    "paymentId": "pay_PmQ8sK2eZvKYlo",
+                    "amount": 499000,
+                    "currency": "INR"
+                  }
+                },
+                {
+                  "kind": "notification.send",
+                  "moneyMoving": false,
+                  "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
+                  "detail": {
+                    "accountId": "acct_7734",
+                    "template": "refund_confirmation"
+                  }
+                }
+              ],
+              "missingInPr": [],
+              "addedInPr": [],
+              "moneyMoving": {
+                "droppedCount": 0,
+                "addedCount": 0
+              },
+              "httpMasked": true,
+              "narrative": "Both branches produced the same effects, in the same order."
+            }
+          ],
+          "markdown": "## EscrowAI is blocking this merge — 2 payment behaviours would silently break\n\nReplayed the webhook fixture library against `pr/route-table-refactor` and the base branch in an isolated sandbox. 5 scenarios checked.\n\n### What would break\n\n**Ordered lifecycle — capture then refund** — SILENT DROP\n\nThe PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced.\n\nEffects the base branch produced that this PR does not:\n- `ledger.debit` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n- `notification.send` (accountId acct_5521, template refund_confirmation)\n\nEffects this PR produces that the base branch does not:\n- `ignored` (eventType charge.refunded)\n\n> Every delivery still returned a success status. Nothing here shows up in logs or metrics.\n\n**Out-of-order — refund before capture** — SILENT DROP\n\nThe PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced.\n\nEffects the base branch produced that this PR does not:\n- `refund.queued` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n- `notification.send` (accountId acct_5521, template refund_confirmation)\n- `ledger.debit` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n\nEffects this PR produces that the base branch does not:\n- `ignored` (eventType charge.refunded)\n\n> Every delivery still returned a success status. Nothing here shows up in logs or metrics.\n\n### Unaffected\nDuplicate delivery — same event twice · Retry after failure — provider redelivers · Duplicate refund — refund event twice\n\n---\nMerge is held until a human reviews the replay diff and approves in the EscrowAI dashboard."
+        }
+      }
+    },
+    {
+      "t": 28148,
+      "event": {
+        "type": "awaiting-approval",
+        "scenarioId": "silent-refund-drop"
+      }
+    },
+    {
+      "t": 30753,
+      "event": {
+        "type": "approved",
+        "scenarioId": "silent-refund-drop",
+        "by": "the team"
+      }
+    },
+    {
+      "t": 30753,
+      "event": {
+        "type": "phase",
+        "phase": "done",
+        "message": "EscrowAI is blocking this merge — 2 payment behaviours would silently break"
+      }
     }
-  ],
-  "verdict": {
-    "gate": "block",
-    "headline": "EscrowAI is blocking this merge — 2 payment behaviours would silently break",
-    "findings": [
-      {
-        "scenarioId": "ordered-lifecycle",
-        "title": "Ordered lifecycle — capture then refund",
-        "classification": "silent-drop",
-        "baseEffects": [
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "payment_receipt"
-            }
-          },
-          {
-            "kind": "ledger.debit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "refund_confirmation"
-            }
-          }
-        ],
-        "prEffects": [
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "payment_receipt"
-            }
-          },
-          {
-            "kind": "ignored",
-            "moneyMoving": false,
-            "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
-            "detail": {
-              "eventType": "charge.refunded"
-            }
-          }
-        ],
-        "missingInPr": [
-          {
-            "kind": "ledger.debit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "refund_confirmation"
-            }
-          }
-        ],
-        "addedInPr": [
-          {
-            "kind": "ignored",
-            "moneyMoving": false,
-            "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
-            "detail": {
-              "eventType": "charge.refunded"
-            }
-          }
-        ],
-        "moneyMoving": {
-          "droppedCount": 1,
-          "addedCount": 0
-        },
-        "httpMasked": true,
-        "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
-      },
-      {
-        "scenarioId": "out-of-order-refund",
-        "title": "Out-of-order — refund before capture",
-        "classification": "silent-drop",
-        "baseEffects": [
-          {
-            "kind": "refund.queued",
-            "moneyMoving": false,
-            "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "refund_confirmation"
-            }
-          },
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "ledger.debit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "payment_receipt"
-            }
-          }
-        ],
-        "prEffects": [
-          {
-            "kind": "ignored",
-            "moneyMoving": false,
-            "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
-            "detail": {
-              "eventType": "charge.refunded"
-            }
-          },
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "payment_receipt"
-            }
-          }
-        ],
-        "missingInPr": [
-          {
-            "kind": "refund.queued",
-            "moneyMoving": false,
-            "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "refund_confirmation"
-            }
-          },
-          {
-            "kind": "ledger.debit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          }
-        ],
-        "addedInPr": [
-          {
-            "kind": "ignored",
-            "moneyMoving": false,
-            "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
-            "detail": {
-              "eventType": "charge.refunded"
-            }
-          }
-        ],
-        "moneyMoving": {
-          "droppedCount": 1,
-          "addedCount": 0
-        },
-        "httpMasked": true,
-        "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
-      }
-    ],
-    "all": [
-      {
-        "scenarioId": "ordered-lifecycle",
-        "title": "Ordered lifecycle — capture then refund",
-        "classification": "silent-drop",
-        "baseEffects": [
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "payment_receipt"
-            }
-          },
-          {
-            "kind": "ledger.debit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "refund_confirmation"
-            }
-          }
-        ],
-        "prEffects": [
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "payment_receipt"
-            }
-          },
-          {
-            "kind": "ignored",
-            "moneyMoving": false,
-            "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
-            "detail": {
-              "eventType": "charge.refunded"
-            }
-          }
-        ],
-        "missingInPr": [
-          {
-            "kind": "ledger.debit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "refund_confirmation"
-            }
-          }
-        ],
-        "addedInPr": [
-          {
-            "kind": "ignored",
-            "moneyMoving": false,
-            "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
-            "detail": {
-              "eventType": "charge.refunded"
-            }
-          }
-        ],
-        "moneyMoving": {
-          "droppedCount": 1,
-          "addedCount": 0
-        },
-        "httpMasked": true,
-        "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
-      },
-      {
-        "scenarioId": "duplicate-delivery",
-        "title": "Duplicate delivery — same event twice",
-        "classification": "unaffected",
-        "baseEffects": [
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "payment_receipt"
-            }
-          }
-        ],
-        "prEffects": [
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "payment_receipt"
-            }
-          }
-        ],
-        "missingInPr": [],
-        "addedInPr": [],
-        "moneyMoving": {
-          "droppedCount": 0,
-          "addedCount": 0
-        },
-        "httpMasked": true,
-        "narrative": "Both branches produced the same effects, in the same order."
-      },
-      {
-        "scenarioId": "out-of-order-refund",
-        "title": "Out-of-order — refund before capture",
-        "classification": "silent-drop",
-        "baseEffects": [
-          {
-            "kind": "refund.queued",
-            "moneyMoving": false,
-            "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "refund_confirmation"
-            }
-          },
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "ledger.debit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "payment_receipt"
-            }
-          }
-        ],
-        "prEffects": [
-          {
-            "kind": "ignored",
-            "moneyMoving": false,
-            "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
-            "detail": {
-              "eventType": "charge.refunded"
-            }
-          },
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "payment_receipt"
-            }
-          }
-        ],
-        "missingInPr": [
-          {
-            "kind": "refund.queued",
-            "moneyMoving": false,
-            "signature": "kind=refund.queued|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_5521|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "template": "refund_confirmation"
-            }
-          },
-          {
-            "kind": "ledger.debit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.debit|accountId=acct_5521|paymentId=pi_3PqL8s2eZvKYlo2C1mQ7xR4a|amount=4999|currency=usd|template=|eventType=",
-            "detail": {
-              "accountId": "acct_5521",
-              "paymentId": "pi_3PqL8s2eZvKYlo2C1mQ7xR4a",
-              "amount": 4999,
-              "currency": "usd"
-            }
-          }
-        ],
-        "addedInPr": [
-          {
-            "kind": "ignored",
-            "moneyMoving": false,
-            "signature": "kind=ignored|accountId=|paymentId=|amount=|currency=|template=|eventType=charge.refunded",
-            "detail": {
-              "eventType": "charge.refunded"
-            }
-          }
-        ],
-        "moneyMoving": {
-          "droppedCount": 1,
-          "addedCount": 0
-        },
-        "httpMasked": true,
-        "narrative": "The PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced."
-      },
-      {
-        "scenarioId": "retry-after-failure",
-        "title": "Retry after failure — provider redelivers",
-        "classification": "unaffected",
-        "baseEffects": [
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "paymentId": "pay_PmQ8sK2eZvKYlo",
-              "amount": 499000,
-              "currency": "INR"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "template": "payment_receipt"
-            }
-          }
-        ],
-        "prEffects": [
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "paymentId": "pay_PmQ8sK2eZvKYlo",
-              "amount": 499000,
-              "currency": "INR"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "template": "payment_receipt"
-            }
-          }
-        ],
-        "missingInPr": [],
-        "addedInPr": [],
-        "moneyMoving": {
-          "droppedCount": 0,
-          "addedCount": 0
-        },
-        "httpMasked": true,
-        "narrative": "Both branches produced the same effects, in the same order."
-      },
-      {
-        "scenarioId": "duplicate-refund",
-        "title": "Duplicate refund — refund event twice",
-        "classification": "unaffected",
-        "baseEffects": [
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "paymentId": "pay_PmQ8sK2eZvKYlo",
-              "amount": 499000,
-              "currency": "INR"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "template": "payment_receipt"
-            }
-          },
-          {
-            "kind": "ledger.debit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.debit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "paymentId": "pay_PmQ8sK2eZvKYlo",
-              "amount": 499000,
-              "currency": "INR"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "template": "refund_confirmation"
-            }
-          }
-        ],
-        "prEffects": [
-          {
-            "kind": "ledger.credit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.credit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "paymentId": "pay_PmQ8sK2eZvKYlo",
-              "amount": 499000,
-              "currency": "INR"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=payment_receipt|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "template": "payment_receipt"
-            }
-          },
-          {
-            "kind": "ledger.debit",
-            "moneyMoving": true,
-            "signature": "kind=ledger.debit|accountId=acct_7734|paymentId=pay_PmQ8sK2eZvKYlo|amount=499000|currency=INR|template=|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "paymentId": "pay_PmQ8sK2eZvKYlo",
-              "amount": 499000,
-              "currency": "INR"
-            }
-          },
-          {
-            "kind": "notification.send",
-            "moneyMoving": false,
-            "signature": "kind=notification.send|accountId=acct_7734|paymentId=|amount=|currency=|template=refund_confirmation|eventType=",
-            "detail": {
-              "accountId": "acct_7734",
-              "template": "refund_confirmation"
-            }
-          }
-        ],
-        "missingInPr": [],
-        "addedInPr": [],
-        "moneyMoving": {
-          "droppedCount": 0,
-          "addedCount": 0
-        },
-        "httpMasked": true,
-        "narrative": "Both branches produced the same effects, in the same order."
-      }
-    ],
-    "markdown": "## EscrowAI is blocking this merge — 2 payment behaviours would silently break\n\nReplayed the webhook fixture library against `pr/route-table-refactor` and the base branch in an isolated sandbox. 5 scenarios checked.\n\n### What would break\n\n**Ordered lifecycle — capture then refund** — SILENT DROP\n\nThe PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced.\n\nEffects the base branch produced that this PR does not:\n- `ledger.debit` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n- `notification.send` (accountId acct_5521, template refund_confirmation)\n\nEffects this PR produces that the base branch does not:\n- `ignored` (eventType charge.refunded)\n\n> Every delivery still returned a success status. Nothing here shows up in logs or metrics.\n\n**Out-of-order — refund before capture** — SILENT DROP\n\nThe PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced.\n\nEffects the base branch produced that this PR does not:\n- `refund.queued` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n- `notification.send` (accountId acct_5521, template refund_confirmation)\n- `ledger.debit` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n\nEffects this PR produces that the base branch does not:\n- `ignored` (eventType charge.refunded)\n\n> Every delivery still returned a success status. Nothing here shows up in logs or metrics.\n\n### Unaffected\nDuplicate delivery — same event twice · Retry after failure — provider redelivers · Duplicate refund — refund event twice\n\n---\nMerge is held until a human reviews the replay diff and approves in the EscrowAI dashboard."
-  },
-  "startedAt": "2026-08-29T23:19:33.468Z",
-  "finishedAt": "2026-08-29T23:20:03.920Z"
+  ]
 }
