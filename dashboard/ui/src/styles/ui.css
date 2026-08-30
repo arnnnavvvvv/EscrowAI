@@ -471,9 +471,8 @@
   line-height: 1;
   flex: none;
 }
-.verdict[data-gate="block"] .verdict__mark { color: var(--drop); }
-.verdict[data-gate="pass"] .verdict__mark,
-.verdict[data-gate="approved"] .verdict__mark { color: var(--acid); }
+.verdict__mark[data-verdict="block"] { color: var(--drop); }
+.verdict__mark[data-verdict="pass"] { color: var(--acid); }
 
 .verdict__headline {
   font-size: var(--step-2);

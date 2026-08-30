@@ -74,7 +74,9 @@ export function VerdictCard({
   return (
     <div className="verdict" data-gate={gate}>
       <div className="verdict__banner">
-        <span className="verdict__mark">{mark}</span>
+        <span className="verdict__mark" data-verdict={verdict.gate}>
+          {mark}
+        </span>
         <div>
           <h2 className="verdict__headline">{verdict.headline}</h2>
           <p className="verdict__sub">
