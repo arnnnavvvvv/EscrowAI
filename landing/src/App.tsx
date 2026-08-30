@@ -5,6 +5,20 @@ import { DemoRun } from "./DemoRun.js";
 
 const REPO = "https://github.com/arnnnavvvvv/EscrowAI";
 
+// The demo video. Paste a YouTube watch/share/embed URL or a bare video id — nothing else needs to change.
+// Currently a placeholder (Big Buck Bunny); swap it for the real EscrowAI demo.
+const DEMO_VIDEO = "https://www.youtube.com/watch?v=aqz-KE-bpKQ";
+
+/** Pull the 11-char video id out of any common YouTube URL form, or accept a bare id. */
+function youTubeId(input: string): string | null {
+  const trimmed = input.trim();
+  if (/^[\w-]{11}$/.test(trimmed)) return trimmed;
+  const match = trimmed.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/
+  );
+  return match ? match[1]! : null;
+}
+
 function Nav() {
   return (
     <nav className="nav">
@@ -42,8 +56,21 @@ function Hero() {
       </div>
 
       <figure className="hero__video">
-        <div className="hero__video-frame" role="img" aria-label="Demo video placeholder">
-          <span>demo video</span>
+        <div className="hero__video-frame">
+          {(() => {
+            const id = youTubeId(DEMO_VIDEO);
+            return id ? (
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${id}?rel=0`}
+                title="EscrowAI demo"
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <span>demo video</span>
+            );
+          })()}
         </div>
       </figure>
     </header>
