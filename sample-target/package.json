@@ -1,0 +1,14 @@
+{
+  "name": "sample-target",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Example payment-webhook service EscrowAI replays against — a ledger with credit, debit, idempotency, and out-of-order handling.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
