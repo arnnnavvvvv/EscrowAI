@@ -16,16 +16,31 @@ interface RunSession {
   scenario: string;
   events: RunEvent[];
   listeners: Set<(event: RunEvent) => void>;
+  closers: Set<() => void>;
   approve: ((who: { by: string }) => void) | null;
   done: boolean;
 }
 
 const sessions = new Map<string, RunSession>();
 
+/** Only scenario ids that exist on disk — guards the path join against traversal. */
+async function isKnownScenario(name: string): Promise<boolean> {
+  if (!/^[a-z0-9][a-z0-9-]*$/i.test(name)) return false;
+  const entries = await readdir(scenariosDir, { withFileTypes: true });
+  return entries.some((e) => e.isDirectory() && e.name === name);
+}
+
 /** Record an event on the session and fan it out to live listeners. */
 function emit(session: RunSession, event: RunEvent): void {
   session.events.push(event);
   for (const listener of session.listeners) listener(event);
+}
+
+/** Mark a session finished and let its SSE streams close. */
+function finish(session: RunSession): void {
+  session.done = true;
+  for (const close of session.closers) close();
+  session.closers.clear();
 }
 
 /** Kick off a run in the background, wiring its events and approval gate to the session. */
@@ -35,6 +50,7 @@ function startRun(scenario: string): RunSession {
     scenario,
     events: [],
     listeners: new Set(),
+    closers: new Set(),
     approve: null,
     done: false
   };
@@ -51,10 +67,12 @@ function startRun(scenario: string): RunSession {
         session.approve = (who) => resolvePromise(who);
       })
   })
-    .catch((err) => emit(session, { type: "error", message: String(err?.message ?? err) }))
-    .finally(() => {
-      session.done = true;
-    });
+    .catch((err) => {
+      emit(session, { type: "error", message: String(err?.message ?? err) });
+      // Give the dashboard a terminal phase so the run reads as finished (failed) and a new one can start.
+      emit(session, { type: "phase", phase: "done", message: "Replay could not complete" });
+    })
+    .finally(() => finish(session));
 
   return session;
 }
@@ -102,6 +120,9 @@ const server = createServer(async (req, res) => {
     if (req.method === "POST" && path === "/api/runs") {
       const body = await readJson(req);
       const scenario = typeof body.scenario === "string" ? body.scenario : "silent-refund-drop";
+      if (!(await isKnownScenario(scenario))) {
+        return send(res, 400, { error: `unknown scenario: ${scenario}` });
+      }
       const session = startRun(scenario);
       return send(res, 202, { runId: session.id, scenario });
     }
@@ -119,12 +140,23 @@ const server = createServer(async (req, res) => {
       });
       const write = (event: RunEvent) => res.write(`data: ${JSON.stringify(event)}\n\n`);
       session.events.forEach(write);
-      session.listeners.add(write);
+
       const keepAlive = setInterval(() => res.write(": ping\n\n"), 15000);
-      req.on("close", () => {
+      const close = () => {
         clearInterval(keepAlive);
         session.listeners.delete(write);
-      });
+        session.closers.delete(close);
+        res.end();
+      };
+      req.on("close", close);
+
+      if (session.done) {
+        // The run already finished before this client connected — replay the buffer and close.
+        close();
+      } else {
+        session.listeners.add(write);
+        session.closers.add(close);
+      }
       return;
     }
 
@@ -146,6 +178,7 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(port, () => {
-  console.log(`EscrowAI agent server on http://localhost:${port}`);
+// Loopback only — this starts resource-heavy runs and releases merge gates; it is for the local dashboard.
+server.listen(port, "127.0.0.1", () => {
+  console.log(`EscrowAI agent server on http://127.0.0.1:${port}`);
 });

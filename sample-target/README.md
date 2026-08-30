@@ -32,6 +32,12 @@ Effect kinds: `ledger.credit`, `ledger.debit`, `refund.queued`, `notification.se
 `ignored`. The money-moving ones — `ledger.credit`, `ledger.debit` — are the effects
 whose disappearance between base and PR is a **silent drop**, not a cosmetic change.
 
+## Scope
+
+This is a demo target, kept minimal on purpose. It handles full refunds, idempotency on
+the event id, and out-of-order delivery. It does **not** model partial or multiple partial
+refunds against one payment — a real service would, and EscrowAI would replay those too.
+
 ## Running standalone
 
 ```bash

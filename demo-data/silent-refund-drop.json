@@ -1751,12 +1751,12 @@
       ],
       "markdown": "## EscrowAI is blocking this merge — 2 payment behaviours would silently break\n\nReplayed the webhook fixture library against `pr/route-table-refactor` and the base branch in an isolated sandbox. 5 scenarios checked.\n\n### What would break\n\n**Ordered lifecycle — capture then refund** — SILENT DROP\n\nThe PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced.\n\nEffects the base branch produced that this PR does not:\n- `ledger.debit` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n- `notification.send` (accountId acct_5521, template refund_confirmation)\n\nEffects this PR produces that the base branch does not:\n- `ignored` (eventType charge.refunded)\n\n> Every delivery still returned a success status. Nothing here shows up in logs or metrics.\n\n**Out-of-order — refund before capture** — SILENT DROP\n\nThe PR still accepted every delivery but stopped producing ledger.debit — money that used to move no longer does, with no error surfaced.\n\nEffects the base branch produced that this PR does not:\n- `refund.queued` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n- `notification.send` (accountId acct_5521, template refund_confirmation)\n- `ledger.debit` (accountId acct_5521, paymentId pi_3PqL8s2eZvKYlo2C1mQ7xR4a, amount 4999, currency usd)\n\nEffects this PR produces that the base branch does not:\n- `ignored` (eventType charge.refunded)\n\n> Every delivery still returned a success status. Nothing here shows up in logs or metrics.\n\n### Unaffected\nDuplicate delivery — same event twice · Retry after failure — provider redelivers · Duplicate refund — refund event twice\n\n---\nMerge is held until a human reviews the replay diff and approves in the EscrowAI dashboard."
     },
-    "startedAt": "2026-08-29T23:39:28.559Z",
-    "finishedAt": "2026-08-29T23:39:59.313Z"
+    "startedAt": "2026-08-29T23:56:20.486Z",
+    "finishedAt": "2026-08-29T23:56:48.355Z"
   },
   "timeline": [
     {
-      "t": 10,
+      "t": 8,
       "event": {
         "type": "meta",
         "scenarioId": "silent-refund-drop",
@@ -1773,7 +1773,7 @@
       }
     },
     {
-      "t": 10,
+      "t": 8,
       "event": {
         "type": "phase",
         "phase": "materialize",
@@ -1781,7 +1781,7 @@
       }
     },
     {
-      "t": 10,
+      "t": 8,
       "event": {
         "type": "boot",
         "role": "base",
@@ -1790,7 +1790,7 @@
       }
     },
     {
-      "t": 10,
+      "t": 8,
       "event": {
         "type": "boot",
         "role": "pr",
@@ -1799,77 +1799,77 @@
       }
     },
     {
-      "t": 14,
+      "t": 12,
       "event": {
         "type": "progress",
         "message": "copying target source"
       }
     },
     {
-      "t": 73,
+      "t": 39,
       "event": {
         "type": "progress",
         "message": "initialising git repo, committing main"
       }
     },
     {
-      "t": 804,
+      "t": 561,
       "event": {
         "type": "progress",
         "message": "branching pr/route-table-refactor, applying scenario patch"
       }
     },
     {
-      "t": 1375,
+      "t": 1029,
       "event": {
         "type": "progress",
         "message": "checking out base and PR working trees"
       }
     },
     {
-      "t": 1773,
+      "t": 1416,
       "event": {
         "type": "progress",
         "message": "base: docker build"
       }
     },
     {
-      "t": 3514,
+      "t": 3061,
       "event": {
         "type": "progress",
-        "message": "base: docker run → :58846"
+        "message": "base: docker run → :60273"
       }
     },
     {
-      "t": 4264,
+      "t": 3839,
       "event": {
         "type": "progress",
         "message": "base: healthy"
       }
     },
     {
-      "t": 4265,
+      "t": 3839,
       "event": {
         "type": "progress",
         "message": "pr: docker build"
       }
     },
     {
-      "t": 5876,
+      "t": 5341,
       "event": {
         "type": "progress",
-        "message": "pr: docker run → :58849"
+        "message": "pr: docker run → :60277"
       }
     },
     {
-      "t": 6865,
+      "t": 6223,
       "event": {
         "type": "progress",
         "message": "pr: healthy"
       }
     },
     {
-      "t": 6865,
+      "t": 6223,
       "event": {
         "type": "boot",
         "role": "base",
@@ -1878,7 +1878,7 @@
       }
     },
     {
-      "t": 6865,
+      "t": 6223,
       "event": {
         "type": "boot",
         "role": "pr",
@@ -1887,7 +1887,7 @@
       }
     },
     {
-      "t": 6865,
+      "t": 6223,
       "event": {
         "type": "phase",
         "phase": "replay",
@@ -1895,21 +1895,21 @@
       }
     },
     {
-      "t": 7802,
+      "t": 7018,
       "event": {
         "type": "progress",
-        "message": "base: docker run → :58854"
+        "message": "base: docker run → :60284"
       }
     },
     {
-      "t": 8838,
+      "t": 7774,
       "event": {
         "type": "progress",
         "message": "base: healthy"
       }
     },
     {
-      "t": 8839,
+      "t": 7774,
       "event": {
         "type": "scenario:start",
         "role": "base",
@@ -1918,7 +1918,7 @@
       }
     },
     {
-      "t": 8857,
+      "t": 7789,
       "event": {
         "type": "step",
         "role": "base",
@@ -1934,7 +1934,7 @@
       }
     },
     {
-      "t": 9089,
+      "t": 8004,
       "event": {
         "type": "step",
         "role": "base",
@@ -1950,7 +1950,7 @@
       }
     },
     {
-      "t": 9101,
+      "t": 8010,
       "event": {
         "type": "scenario:done",
         "role": "base",
@@ -1959,21 +1959,21 @@
       }
     },
     {
-      "t": 10109,
+      "t": 8811,
       "event": {
         "type": "progress",
-        "message": "base: docker run → :58860"
+        "message": "base: docker run → :60290"
       }
     },
     {
-      "t": 11103,
+      "t": 9609,
       "event": {
         "type": "progress",
         "message": "base: healthy"
       }
     },
     {
-      "t": 11103,
+      "t": 9609,
       "event": {
         "type": "scenario:start",
         "role": "base",
@@ -1982,7 +1982,7 @@
       }
     },
     {
-      "t": 11124,
+      "t": 9618,
       "event": {
         "type": "step",
         "role": "base",
@@ -1998,7 +1998,7 @@
       }
     },
     {
-      "t": 11293,
+      "t": 9789,
       "event": {
         "type": "step",
         "role": "base",
@@ -2015,7 +2015,7 @@
       }
     },
     {
-      "t": 11299,
+      "t": 9794,
       "event": {
         "type": "scenario:done",
         "role": "base",
@@ -2024,21 +2024,21 @@
       }
     },
     {
-      "t": 12183,
+      "t": 10652,
       "event": {
         "type": "progress",
-        "message": "base: docker run → :58866"
+        "message": "base: docker run → :60295"
       }
     },
     {
-      "t": 13170,
+      "t": 11690,
       "event": {
         "type": "progress",
         "message": "base: healthy"
       }
     },
     {
-      "t": 13170,
+      "t": 11690,
       "event": {
         "type": "scenario:start",
         "role": "base",
@@ -2047,7 +2047,7 @@
       }
     },
     {
-      "t": 13186,
+      "t": 11705,
       "event": {
         "type": "step",
         "role": "base",
@@ -2063,7 +2063,7 @@
       }
     },
     {
-      "t": 13409,
+      "t": 11921,
       "event": {
         "type": "step",
         "role": "base",
@@ -2079,7 +2079,7 @@
       }
     },
     {
-      "t": 13417,
+      "t": 11926,
       "event": {
         "type": "scenario:done",
         "role": "base",
@@ -2088,21 +2088,21 @@
       }
     },
     {
-      "t": 14268,
+      "t": 12823,
       "event": {
         "type": "progress",
-        "message": "base: docker run → :58872"
+        "message": "base: docker run → :60301"
       }
     },
     {
-      "t": 15251,
+      "t": 13781,
       "event": {
         "type": "progress",
         "message": "base: healthy"
       }
     },
     {
-      "t": 15251,
+      "t": 13781,
       "event": {
         "type": "scenario:start",
         "role": "base",
@@ -2111,7 +2111,7 @@
       }
     },
     {
-      "t": 15329,
+      "t": 13861,
       "event": {
         "type": "step",
         "role": "base",
@@ -2127,7 +2127,7 @@
       }
     },
     {
-      "t": 15334,
+      "t": 13864,
       "event": {
         "type": "scenario:done",
         "role": "base",
@@ -2136,21 +2136,21 @@
       }
     },
     {
-      "t": 16199,
+      "t": 14735,
       "event": {
         "type": "progress",
-        "message": "base: docker run → :58878"
+        "message": "base: docker run → :60307"
       }
     },
     {
-      "t": 17196,
+      "t": 15669,
       "event": {
         "type": "progress",
         "message": "base: healthy"
       }
     },
     {
-      "t": 17197,
+      "t": 15669,
       "event": {
         "type": "scenario:start",
         "role": "base",
@@ -2159,7 +2159,7 @@
       }
     },
     {
-      "t": 17205,
+      "t": 15679,
       "event": {
         "type": "step",
         "role": "base",
@@ -2175,7 +2175,7 @@
       }
     },
     {
-      "t": 17374,
+      "t": 15853,
       "event": {
         "type": "step",
         "role": "base",
@@ -2191,7 +2191,7 @@
       }
     },
     {
-      "t": 17545,
+      "t": 16020,
       "event": {
         "type": "step",
         "role": "base",
@@ -2208,7 +2208,7 @@
       }
     },
     {
-      "t": 17550,
+      "t": 16025,
       "event": {
         "type": "scenario:done",
         "role": "base",
@@ -2217,21 +2217,21 @@
       }
     },
     {
-      "t": 18465,
+      "t": 16684,
       "event": {
         "type": "progress",
-        "message": "pr: docker run → :58884"
+        "message": "pr: docker run → :60313"
       }
     },
     {
-      "t": 19479,
+      "t": 17596,
       "event": {
         "type": "progress",
         "message": "pr: healthy"
       }
     },
     {
-      "t": 19479,
+      "t": 17596,
       "event": {
         "type": "scenario:start",
         "role": "pr",
@@ -2240,7 +2240,7 @@
       }
     },
     {
-      "t": 19496,
+      "t": 17604,
       "event": {
         "type": "step",
         "role": "pr",
@@ -2256,7 +2256,7 @@
       }
     },
     {
-      "t": 19706,
+      "t": 17822,
       "event": {
         "type": "step",
         "role": "pr",
@@ -2272,7 +2272,7 @@
       }
     },
     {
-      "t": 19714,
+      "t": 17825,
       "event": {
         "type": "scenario:done",
         "role": "pr",
@@ -2281,21 +2281,21 @@
       }
     },
     {
-      "t": 20609,
+      "t": 18761,
       "event": {
         "type": "progress",
-        "message": "pr: docker run → :58890"
+        "message": "pr: docker run → :60319"
       }
     },
     {
-      "t": 21617,
+      "t": 19582,
       "event": {
         "type": "progress",
         "message": "pr: healthy"
       }
     },
     {
-      "t": 21618,
+      "t": 19583,
       "event": {
         "type": "scenario:start",
         "role": "pr",
@@ -2304,7 +2304,7 @@
       }
     },
     {
-      "t": 21627,
+      "t": 19601,
       "event": {
         "type": "step",
         "role": "pr",
@@ -2320,7 +2320,7 @@
       }
     },
     {
-      "t": 21790,
+      "t": 19771,
       "event": {
         "type": "step",
         "role": "pr",
@@ -2337,7 +2337,7 @@
       }
     },
     {
-      "t": 21795,
+      "t": 19774,
       "event": {
         "type": "scenario:done",
         "role": "pr",
@@ -2346,21 +2346,21 @@
       }
     },
     {
-      "t": 22670,
+      "t": 20568,
       "event": {
         "type": "progress",
-        "message": "pr: docker run → :58896"
+        "message": "pr: docker run → :60325"
       }
     },
     {
-      "t": 23704,
+      "t": 21450,
       "event": {
         "type": "progress",
         "message": "pr: healthy"
       }
     },
     {
-      "t": 23704,
+      "t": 21450,
       "event": {
         "type": "scenario:start",
         "role": "pr",
@@ -2369,7 +2369,7 @@
       }
     },
     {
-      "t": 23711,
+      "t": 21461,
       "event": {
         "type": "step",
         "role": "pr",
@@ -2385,7 +2385,7 @@
       }
     },
     {
-      "t": 23932,
+      "t": 21671,
       "event": {
         "type": "step",
         "role": "pr",
@@ -2401,7 +2401,7 @@
       }
     },
     {
-      "t": 23936,
+      "t": 21674,
       "event": {
         "type": "scenario:done",
         "role": "pr",
@@ -2410,21 +2410,21 @@
       }
     },
     {
-      "t": 24836,
+      "t": 22382,
       "event": {
         "type": "progress",
-        "message": "pr: docker run → :58902"
+        "message": "pr: docker run → :60331"
       }
     },
     {
-      "t": 25790,
+      "t": 23249,
       "event": {
         "type": "progress",
         "message": "pr: healthy"
       }
     },
     {
-      "t": 25790,
+      "t": 23249,
       "event": {
         "type": "scenario:start",
         "role": "pr",
@@ -2433,7 +2433,7 @@
       }
     },
     {
-      "t": 25863,
+      "t": 23324,
       "event": {
         "type": "step",
         "role": "pr",
@@ -2449,7 +2449,7 @@
       }
     },
     {
-      "t": 25868,
+      "t": 23328,
       "event": {
         "type": "scenario:done",
         "role": "pr",
@@ -2458,21 +2458,21 @@
       }
     },
     {
-      "t": 26745,
+      "t": 24049,
       "event": {
         "type": "progress",
-        "message": "pr: docker run → :58908"
+        "message": "pr: docker run → :60338"
       }
     },
     {
-      "t": 27786,
+      "t": 24913,
       "event": {
         "type": "progress",
         "message": "pr: healthy"
       }
     },
     {
-      "t": 27786,
+      "t": 24913,
       "event": {
         "type": "scenario:start",
         "role": "pr",
@@ -2481,7 +2481,7 @@
       }
     },
     {
-      "t": 27805,
+      "t": 24920,
       "event": {
         "type": "step",
         "role": "pr",
@@ -2497,7 +2497,7 @@
       }
     },
     {
-      "t": 27973,
+      "t": 25090,
       "event": {
         "type": "step",
         "role": "pr",
@@ -2513,7 +2513,7 @@
       }
     },
     {
-      "t": 28142,
+      "t": 25259,
       "event": {
         "type": "step",
         "role": "pr",
@@ -2530,7 +2530,7 @@
       }
     },
     {
-      "t": 28146,
+      "t": 25262,
       "event": {
         "type": "scenario:done",
         "role": "pr",
@@ -2539,7 +2539,7 @@
       }
     },
     {
-      "t": 28146,
+      "t": 25262,
       "event": {
         "type": "phase",
         "phase": "diff",
@@ -2547,7 +2547,7 @@
       }
     },
     {
-      "t": 28147,
+      "t": 25263,
       "event": {
         "type": "diff",
         "diff": {
@@ -2668,7 +2668,7 @@
       }
     },
     {
-      "t": 28147,
+      "t": 25263,
       "event": {
         "type": "diff",
         "diff": {
@@ -2731,7 +2731,7 @@
       }
     },
     {
-      "t": 28147,
+      "t": 25263,
       "event": {
         "type": "diff",
         "diff": {
@@ -2874,7 +2874,7 @@
       }
     },
     {
-      "t": 28147,
+      "t": 25263,
       "event": {
         "type": "diff",
         "diff": {
@@ -2937,7 +2937,7 @@
       }
     },
     {
-      "t": 28147,
+      "t": 25263,
       "event": {
         "type": "diff",
         "diff": {
@@ -3040,7 +3040,7 @@
       }
     },
     {
-      "t": 28147,
+      "t": 25263,
       "event": {
         "type": "phase",
         "phase": "verdict",
@@ -3048,7 +3048,7 @@
       }
     },
     {
-      "t": 28148,
+      "t": 25263,
       "event": {
         "type": "verdict",
         "verdict": {
@@ -3778,14 +3778,14 @@
       }
     },
     {
-      "t": 28148,
+      "t": 25263,
       "event": {
         "type": "awaiting-approval",
         "scenarioId": "silent-refund-drop"
       }
     },
     {
-      "t": 30753,
+      "t": 27869,
       "event": {
         "type": "approved",
         "scenarioId": "silent-refund-drop",
@@ -3793,7 +3793,7 @@
       }
     },
     {
-      "t": 30753,
+      "t": 27869,
       "event": {
         "type": "phase",
         "phase": "done",

@@ -17,7 +17,7 @@ export interface RunViewProps {
   baseBranch?: string;
   prBranch?: string;
   /** Called when the reviewer releases the merge hold. Omit on read-only surfaces (landing demo). */
-  onApprove?: () => void;
+  onApprove?: () => void | Promise<void>;
 }
 
 export function RunView({ model, title, baseBranch, prBranch, onApprove }: RunViewProps) {
@@ -29,6 +29,11 @@ export function RunView({ model, title, baseBranch, prBranch, onApprove }: RunVi
     <div className="run-view">
       <div className="run-view__main">
         <RunHeader model={model} title={t} baseBranch={base} prBranch={pr} />
+        {model.error && (
+          <div className="run-error" role="alert">
+            Replay could not complete — {model.error}
+          </div>
+        )}
         <Branches model={model} baseBranch={base} prBranch={pr} />
         <ReplayTimeline scenarios={model.scenarios} />
         <VerdictCard model={model} onApprove={onApprove} />

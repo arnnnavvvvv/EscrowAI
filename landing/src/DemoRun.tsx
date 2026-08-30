@@ -9,9 +9,19 @@ export function DemoRun() {
   const [source, setSource] = useState<PlayerControls | null>(null);
 
   useEffect(() => {
-    const player = createPlayerSource(demoCapture, { speed: 1.6, loopDelayMs: 7000 });
+    // Recreate on each cycle (via runNo) so the reduced view state resets to empty before replaying.
+    let restartTimer: ReturnType<typeof setTimeout>;
+    const player = createPlayerSource(demoCapture, {
+      speed: 1.6,
+      onEnd: () => {
+        restartTimer = setTimeout(() => setRunNo((n) => n + 1), 6000);
+      }
+    });
     setSource(player);
-    return () => player.stop();
+    return () => {
+      clearTimeout(restartTimer);
+      player.stop();
+    };
   }, [runNo]);
 
   const model = useRunModel(source);

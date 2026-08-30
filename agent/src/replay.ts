@@ -5,6 +5,9 @@ import type { BranchInstance } from "@escrowai/sandbox";
 import type { ScenarioRun, StepResult } from "./types.js";
 import { normalizeEffects } from "./effects.js";
 
+// A PR branch that accepts a connection but never responds must not hang the merge gate — every replay call is bounded.
+const REQUEST_TIMEOUT_MS = 15_000;
+
 /** Shallow-merge overrides onto a copy of the fixture body. */
 function applyOverrides(body: unknown, overrides?: Record<string, unknown>): unknown {
   if (!overrides) return body;
@@ -27,7 +30,8 @@ async function deliver(
   const res = await fetch(instance.baseUrl + route, {
     method: "POST",
     headers: { ...fixture.headers, ...headerOverrides },
-    body: JSON.stringify(applyOverrides(fixture.body, bodyOverrides))
+    body: JSON.stringify(applyOverrides(fixture.body, bodyOverrides)),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   });
   const text = await res.text();
   let responseBody: unknown = text;
@@ -41,16 +45,26 @@ async function deliver(
 
 /** Tell the target to fail its next N webhook deliveries, to model a provider retry. */
 async function armFailure(instance: BranchInstance, count: number): Promise<void> {
-  await fetch(instance.baseUrl + instance.manifest.failInjectionEndpoint, {
+  const res = await fetch(instance.baseUrl + instance.manifest.failInjectionEndpoint, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ count })
+    body: JSON.stringify({ count }),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   });
+  // If the PR broke or removed the control endpoint we cannot inject the failure — fail loudly
+  // rather than silently reporting the retry scenario as unaffected.
+  if (!res.ok) {
+    throw new Error(
+      `failure injection endpoint returned ${res.status} on the ${instance.role} branch — cannot run a retry scenario`
+    );
+  }
 }
 
 /** Read the target's ordered effect log. */
 async function readEffects(instance: BranchInstance): Promise<unknown> {
-  const res = await fetch(instance.baseUrl + instance.manifest.effectsEndpoint);
+  const res = await fetch(instance.baseUrl + instance.manifest.effectsEndpoint, {
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+  });
   const json = (await res.json()) as { effects?: unknown };
   return json.effects ?? [];
 }
