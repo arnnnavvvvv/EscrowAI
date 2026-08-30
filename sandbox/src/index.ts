@@ -18,14 +18,22 @@ export async function createSandbox(opts: CreateSandboxOptions): Promise<Sandbox
   const say = opts.onProgress ?? (() => {});
   const wanted = opts.backend ?? "auto";
 
-  const { scenario, baseDir, baseManifest, prDir, prManifest } = await materialize({
-    targetDir: opts.targetDir,
-    scenarioDir: opts.scenarioDir,
-    workDir: opts.workDir,
-    onProgress: say
-  });
-
   const cleanWorkDir = () => rm(opts.workDir, { recursive: true, force: true }).catch(() => {});
+
+  let materialized;
+  try {
+    materialized = await materialize({
+      targetDir: opts.targetDir,
+      scenarioDir: opts.scenarioDir,
+      workDir: opts.workDir,
+      onProgress: say
+    });
+  } catch (err) {
+    // A patch that won't apply, a bad manifest, a git failure — don't leave the half-built worktree behind.
+    await cleanWorkDir();
+    throw err;
+  }
+  const { scenario, baseDir, baseManifest, prDir, prManifest } = materialized;
 
   let backend: "docker" | "process";
   if (wanted === "docker") {

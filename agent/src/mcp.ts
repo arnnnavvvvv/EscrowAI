@@ -3,6 +3,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -90,7 +91,8 @@ export function buildMcpServer(): McpServer {
       const result = await runReplay({
         targetDir,
         scenarioDir: join(scenariosDir, scenario),
-        workDir: join(repoRoot, ".escrowai-work", `mcp-${scenario}`),
+        // Unique per call so concurrent replays don't share (and wipe) a work directory.
+        workDir: join(repoRoot, ".escrowai-work", `mcp-${scenario}-${randomUUID().slice(0, 8)}`),
         backend: "auto"
       });
       return {

@@ -42,16 +42,19 @@ export function App() {
 
   async function approve() {
     if (phase.kind !== "running") return;
+    setError(null);
     try {
       await approveRun(phase.runId, "you");
     } catch {
       setError("Could not release the merge hold — the agent server may have stopped.");
+      throw new Error("approval failed");
     }
   }
 
   if (phase.kind === "running") {
     return (
       <div className="dash">
+        {error && <p className="dash__error">{error}</p>}
         <RunView model={model} onApprove={approve} />
       </div>
     );

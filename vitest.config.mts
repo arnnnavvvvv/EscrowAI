@@ -6,6 +6,11 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["**/*.test.ts", "**/*.test.js"],
-    exclude: ["**/node_modules/**", "**/dist/**"]
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      // Materialised base/PR checkouts — they contain copies of the target's own tests.
+      ".escrowai-work/**"
+    ]
   }
 });

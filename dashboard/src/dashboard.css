@@ -69,3 +69,15 @@
   font-family: var(--font-mono);
   margin: 0;
 }
+
+.dash__error {
+  max-width: 1180px;
+  margin: var(--sp-4) auto 0;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--drop-dim);
+  background: var(--drop-dim);
+  border-radius: var(--r-2);
+  color: var(--text-0);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+}
